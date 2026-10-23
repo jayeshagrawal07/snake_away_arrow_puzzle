@@ -8,16 +8,16 @@
 ## 📈 Milestone Overview
 
 ```
-[███████████████░░░░░] ~50% Complete Overall
+[████████████████████░] ~65% Complete Overall
 ```
 
 | Milestone | Description | Status | Target / Notes |
 |:---|:---|:---:|:---|
 | **M1** | Repository Audit & Project Foundation | ✅ Complete | Directory structure, asmdefs, docs |
 | **M2** | Pure Puzzle Engine (Domain & App Layer) | ✅ Complete | Pure C# logic, rules, solver, EditMode tests |
-| **M3** | First Playable Level (Clean Presentation) | ✅ Complete | BoardView, SnakeView, SnakeRenderer, input, GameController |
-| **M4** | Reliable Gameplay Systems | 🟡 In Progress | Undo, restart, pause, transition guards |
-| **M5** | Level Authoring & Solver Tooling | 🟡 In Progress | LevelAssetCreator, Editor tools, level batch validator |
+| **M3** | First Playable Level (Clean Presentation) | ✅ Complete | BoardView, SnakeView, SnakeRenderer, input |
+| **M4** | Reliable Gameplay Systems | ✅ Complete | Undo, restart, pause, transition guards, scene tooling |
+| **M5** | Level Authoring & Solver Tooling | 🟡 In Progress | Visual level editor window, campaign batch validator |
 | **M6** | Campaign & Progression | ⏳ Pending | 30 verified levels, save/load, level select |
 | **M7** | UI, Art & Audio Polish | ⏳ Pending | SFX, BGM, haptics, responsive HUD |
 | **M8** | QA & Optimization | ⏳ Pending | PlayMode tests, device profiling, edge cases |
@@ -81,6 +81,20 @@
 - [x] **Authoring & Tooling**:
   - [`LevelAssetCreator.cs`](./Assets/Editor/LevelEditor/LevelAssetCreator.cs) — Editor tool (`Tools > Snake Escape > Generate Sample Levels`) to create solver-validated `LevelDefinition` ScriptableObject assets.
   - [`CampaignValidationTests.cs`](./Assets/Tests/EditMode/Domain/CampaignValidationTests.cs) — Automated test proving level 1 solver verification.
+
+### Milestone 4: Reliable Gameplay Systems
+- [x] **Auto-Constructing UI Views**:
+  - [`GameplayHUD.cs`](./Assets/Game/Scripts/Presentation/UI/GameplayHUD.cs) — Dynamic top bar (Level title, snake count badge) and bottom bar (Undo & Restart buttons).
+  - [`LevelCompleteUI.cs`](./Assets/Game/Scripts/Presentation/UI/LevelCompleteUI.cs) — Centered completion card with "Next Level ▶" and "Play Again" buttons.
+- [x] **Interactive Undo & Restart**:
+  - Instant snapshot restore via `UndoService` respawning escaped snakes in original poses.
+  - Full board reset via `RestartLevel`.
+- [x] **Input Guards**:
+  - Blocked repeated rapid taps while moves are in flight via `Session.CurrentState == Ready`.
+- [x] **Multi-Level Progression**:
+  - Seamless campaign loop across Level 1, Level 2, and Level 3 on completion.
+- [x] **Scene Setup Automation**:
+  - Added `Tools > Snake Escape > Setup Gameplay Scene` menu item to create `Assets/Game/Scenes/Gameplay.unity` in one click.
 
 ---
 

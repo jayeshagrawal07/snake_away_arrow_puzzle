@@ -1,7 +1,9 @@
 using System.Collections.Generic;
 using System.IO;
 using SnakeEscape.Domain;
+using SnakeEscape.Presentation;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace SnakeEscape.Editor
@@ -9,6 +11,36 @@ namespace SnakeEscape.Editor
     public static class LevelAssetCreator
     {
         private const string LevelsFolder = "Assets/Game/Data/Levels";
+        private const string ScenePath = "Assets/Game/Scenes/Gameplay.unity";
+
+        [MenuItem("Tools/Snake Escape/Setup Gameplay Scene")]
+        public static void CreateGameplayScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // Main Camera
+            var camObj = new GameObject("Main Camera");
+            var cam = camObj.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 5.5f;
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.96f, 0.96f, 0.94f); // Warm clean background per spec
+            camObj.transform.position = new Vector3(0f, 0f, -10f);
+            camObj.tag = "MainCamera";
+
+            // GameController Root (BoardView, SnakeInputHandler, GameplayHUD, LevelCompleteUI auto-attached)
+            var controllerObj = new GameObject("[GameController]");
+            controllerObj.AddComponent<GameController>();
+
+            // Ensure directory exists
+            string dir = Path.GetDirectoryName(ScenePath);
+            if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
+
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.Refresh();
+
+            Debug.Log("[LevelAssetCreator] Gameplay.unity scene created and saved to " + ScenePath);
+        }
 
         [MenuItem("Tools/Snake Escape/Generate Sample Levels")]
         public static void GenerateSampleLevels()
@@ -192,3 +224,4 @@ namespace SnakeEscape.Editor
         }
     }
 }
+

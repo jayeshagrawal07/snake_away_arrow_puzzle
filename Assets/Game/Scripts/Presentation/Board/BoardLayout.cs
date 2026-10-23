@@ -66,3 +66,4 @@ namespace SnakeEscape.Presentation
         public float BoardHeight => (Rows - 1) * CellSpacing;
     }
 }
+
