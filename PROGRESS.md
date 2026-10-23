@@ -83,6 +83,18 @@
   - [`CampaignValidationTests.cs`](./Assets/Tests/EditMode/Domain/CampaignValidationTests.cs) — Automated test proving level 1 solver verification.
 
 ### Milestone 4: Reliable Gameplay Systems
+- [x] **Production Visual Alignment (Matched Image 2)**:
+  - Corrected snake head scale to sleek `1.45x` proportion (eliminated the bloated 5.2x debug balloon head).
+  - Adopted deep crisp navy-black (`#0B0E14`) color styling.
+  - Multi-sample Bezier interpolation for smooth, silky snake curves.
+  - Dot grid rendered selectively under snakes and boundaries rather than entire empty canvas.
+  - Pure crisp white camera background (`#FFFFFF`).
+- [x] **Production HUD Layout (Matched Image 2)**:
+  - Top row: Circular blue Pause button, Level title, Circular blue Settings button.
+  - Row 2: Snake counter badge, 3 Red Hearts container (`♥♥♥`), Difficulty pill ("Easy", "Medium", "Hard").
+  - Bottom row: Circular Hint lightbulb button with `+` badge, Circular Ruler guide button with `+` badge, and clean Undo pill.
+- [x] **Long-Spine Interlocking Maze Generator**:
+  - [`LongSpineMazeGenerator.cs`](./Assets/Game/Scripts/Domain/LongSpineMazeGenerator.cs) — Reverse-topological carving creating rich 8-snake to 65-snake mazes (e.g. Level 10) that are guaranteed solvable.
 - [x] **Auto-Constructing UI Views**:
   - [`GameplayHUD.cs`](./Assets/Game/Scripts/Presentation/UI/GameplayHUD.cs) — Dynamic top bar (Level title, snake count badge) and bottom bar (Undo & Restart buttons).
   - [`LevelCompleteUI.cs`](./Assets/Game/Scripts/Presentation/UI/LevelCompleteUI.cs) — Centered completion card with "Next Level ▶" and "Play Again" buttons.
