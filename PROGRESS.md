@@ -8,16 +8,16 @@
 ## 📈 Milestone Overview
 
 ```
-[██████████░░░░░░░░░░] ~35% Complete Overall
+[███████████████░░░░░] ~50% Complete Overall
 ```
 
 | Milestone | Description | Status | Target / Notes |
 |:---|:---|:---:|:---|
 | **M1** | Repository Audit & Project Foundation | ✅ Complete | Directory structure, asmdefs, docs |
 | **M2** | Pure Puzzle Engine (Domain & App Layer) | ✅ Complete | Pure C# logic, rules, solver, EditMode tests |
-| **M3** | First Playable Level (Clean Presentation) | 🟡 In Progress | BoardView, SnakeView, SnakeRenderer, input |
-| **M4** | Reliable Gameplay Systems | ⏳ Pending | Undo, restart, pause, transition guards |
-| **M5** | Level Authoring & Solver Tooling | ⏳ Pending | Unity editor window, level validator tool |
+| **M3** | First Playable Level (Clean Presentation) | ✅ Complete | BoardView, SnakeView, SnakeRenderer, input, GameController |
+| **M4** | Reliable Gameplay Systems | 🟡 In Progress | Undo, restart, pause, transition guards |
+| **M5** | Level Authoring & Solver Tooling | 🟡 In Progress | LevelAssetCreator, Editor tools, level batch validator |
 | **M6** | Campaign & Progression | ⏳ Pending | 30 verified levels, save/load, level select |
 | **M7** | UI, Art & Audio Polish | ⏳ Pending | SFX, BGM, haptics, responsive HUD |
 | **M8** | QA & Optimization | ⏳ Pending | PlayMode tests, device profiling, edge cases |
@@ -32,6 +32,8 @@
 - [x] Configured Assembly Definitions for modular isolation:
   - `SnakeEscape.Domain.asmdef`
   - `SnakeEscape.Application.asmdef`
+  - `SnakeEscape.Presentation.asmdef`
+  - `SnakeEscape.Editor.asmdef`
   - `SnakeEscape.Tests.EditMode.asmdef`
 - [x] Created project documentation:
   - [`README.md`](./README.md)
@@ -61,7 +63,24 @@
   - [`ProgressionService.cs`](./Assets/Game/Scripts/Application/ProgressionService.cs) — Unlocks & completion persistence.
 - [x] **Unit Testing**:
   - Full EditMode test suite covering grid math, occupancy, rules, move validation, BFS solver, and session lifecycle.
-  - Fixed NUnit assembly definition references and Linq imports. Verified 0 compilation errors.
+  - Verified 0 compilation errors.
+
+### Milestone 3: First Playable Level (Clean Presentation Layer)
+- [x] **Board Presentation**:
+  - [`BoardLayout.cs`](./Assets/Game/Scripts/Presentation/Board/BoardLayout.cs) — Grid-to-world conversion, centering, dimensions.
+  - [`GridRenderer.cs`](./Assets/Game/Scripts/Presentation/Board/GridRenderer.cs) — Procedural round dot grid background.
+  - [`BoardView.cs`](./Assets/Game/Scripts/Presentation/Board/BoardView.cs) — Snake spawning, dictionary tracking, layout lifecycle.
+- [x] **Snake Presentation**:
+  - [`SnakeRenderer.cs`](./Assets/Game/Scripts/Presentation/Snake/SnakeRenderer.cs) — Smooth corner LineRenderer with width taper, anti-aliased texture, and procedural viper head with tongue.
+  - [`SnakeAnimator.cs`](./Assets/Game/Scripts/Presentation/Snake/SnakeAnimator.cs) — Slither motion along escape trajectory & bump/impact feedback on blocked route.
+  - [`SnakeView.cs`](./Assets/Game/Scripts/Presentation/Snake/SnakeView.cs) — Composite component for distance-to-segment tap targets.
+- [x] **Input & Orchestration**:
+  - [`SnakeInputHandler.cs`](./Assets/Game/Scripts/Presentation/Snake/SnakeInputHandler.cs) — Touch & click detection, nearest snake resolver.
+  - [`GameController.cs`](./Assets/Game/Scripts/Presentation/GameController.cs) — Master presentation runner connecting `GameSession` with views, handling undo/restart, and built-in sample level generator.
+  - [`GameplayHUD.cs`](./Assets/Game/Scripts/Presentation/UI/GameplayHUD.cs) & [`LevelCompleteUI.cs`](./Assets/Game/Scripts/Presentation/UI/LevelCompleteUI.cs) — Decoupled UI views.
+- [x] **Authoring & Tooling**:
+  - [`LevelAssetCreator.cs`](./Assets/Editor/LevelEditor/LevelAssetCreator.cs) — Editor tool (`Tools > Snake Escape > Generate Sample Levels`) to create solver-validated `LevelDefinition` ScriptableObject assets.
+  - [`CampaignValidationTests.cs`](./Assets/Tests/EditMode/Domain/CampaignValidationTests.cs) — Automated test proving level 1 solver verification.
 
 ---
 
@@ -109,3 +128,4 @@
 ### Technical Debt / Cleanup
 - [ ] Gradually decommission and delete legacy God Object `GameManager.cs` once new modular presentation layer is active.
 - [ ] Convert procedural button generation to modular UI prefabs.
+

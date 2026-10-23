@@ -1,0 +1,20 @@
+{
+    "name": "SnakeEscape.Editor",
+    "rootNamespace": "SnakeEscape.Editor",
+    "references": [
+        "SnakeEscape.Domain",
+        "SnakeEscape.Application",
+        "SnakeEscape.Presentation"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

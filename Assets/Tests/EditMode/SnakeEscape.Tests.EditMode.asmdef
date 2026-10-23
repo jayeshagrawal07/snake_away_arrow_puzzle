@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "SnakeEscape.Domain",
-        "SnakeEscape.Application"
+        "SnakeEscape.Application",
+        "SnakeEscape.Presentation"
     ],
     "includePlatforms": [
         "Editor"

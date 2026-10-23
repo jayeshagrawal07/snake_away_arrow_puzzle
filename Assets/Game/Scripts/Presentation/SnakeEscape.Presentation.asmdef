@@ -1,0 +1,18 @@
+{
+    "name": "SnakeEscape.Presentation",
+    "rootNamespace": "SnakeEscape.Presentation",
+    "references": [
+        "SnakeEscape.Domain",
+        "SnakeEscape.Application",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
