@@ -28,7 +28,7 @@ namespace SnakeEscape.Presentation
             snakeAnimator = GetComponent<SnakeAnimator>();
         }
 
-        public void Initialize(SnakeDefinition definition, BoardLayout layout)
+        public void Initialize(SnakeDefinition definition, BoardLayout layout, float lineWidth = 0.13f)
         {
             Definition = definition ?? throw new ArgumentNullException(nameof(definition));
             Layout = layout ?? throw new ArgumentNullException(nameof(layout));
@@ -39,7 +39,7 @@ namespace SnakeEscape.Presentation
                 worldPoints.Add(layout.GridToWorld(cell));
             }
 
-            snakeRenderer.InitializeVisuals(worldPoints, definition.ExitDirection, definition.BodyColor);
+            snakeRenderer.InitializeVisuals(worldPoints, definition.ExitDirection, definition.BodyColor, lineWidth);
         }
 
         /// <summary>

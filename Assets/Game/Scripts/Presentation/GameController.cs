@@ -10,7 +10,7 @@ namespace SnakeEscape.Presentation
     /// <summary>
     /// Master presentation controller that wires the GameSession to the BoardView,
     /// SnakeInputHandler, and UI views.
-    /// Manages multi-level progression, undo restoration, and input guards.
+    /// Supports both procedural long-spine levels and authored LevelDefinition assets.
     /// </summary>
     [RequireComponent(typeof(BoardView), typeof(SnakeInputHandler))]
     public class GameController : MonoBehaviour
@@ -21,9 +21,10 @@ namespace SnakeEscape.Presentation
         [SerializeField] private GameplayHUD hud;
         [SerializeField] private LevelCompleteUI completeUI;
 
-        [Header("Campaign Levels")]
-        [SerializeField] private List<LevelDefinition> campaignLevels = new List<LevelDefinition>();
-        private int currentLevelIndex = 0;
+        [Header("Level Configuration")]
+        [Tooltip("Starting level number (e.g. 1, 5, 10).")]
+        [SerializeField] private int currentLevelNumber = 1;
+        [SerializeField] private int playerLives = 3;
 
         public GameSession Session { get; private set; }
 
@@ -33,6 +34,13 @@ namespace SnakeEscape.Presentation
             if (inputHandler == null) inputHandler = GetComponent<SnakeInputHandler>();
             if (hud == null) hud = gameObject.AddComponent<GameplayHUD>();
             if (completeUI == null) completeUI = gameObject.AddComponent<LevelCompleteUI>();
+
+            // Ensure Camera has pure white background like Image 2
+            if (Camera.main != null)
+            {
+                Camera.main.clearFlags = CameraClearFlags.SolidColor;
+                Camera.main.backgroundColor = Color.white;
+            }
 
             Session = new GameSession();
         }
@@ -53,14 +61,7 @@ namespace SnakeEscape.Presentation
 
             Session.OnLevelComplete += HandleLevelComplete;
 
-            // Initialize campaign levels if none assigned
-            if (campaignLevels == null || campaignLevels.Count == 0)
-            {
-                campaignLevels = CreateSampleCampaign();
-            }
-
-            currentLevelIndex = 0;
-            LoadCurrentLevel();
+            LoadLevelByNumber(currentLevelNumber);
         }
 
         private void Update()
@@ -71,8 +72,18 @@ namespace SnakeEscape.Presentation
             }
         }
 
+        public void LoadLevelByNumber(int levelNum)
+        {
+            currentLevelNumber = Mathf.Max(1, levelNum);
+
+            // Generate dense long-spine interlocking level matching production quality
+            LevelDefinition generatedLevel = LongSpineMazeGenerator.Generate(currentLevelNumber);
+            LoadLevel(generatedLevel);
+        }
+
         public void LoadLevel(LevelDefinition level)
         {
+            playerLives = 3;
             Session.LoadLevel(level);
             boardView.SetupBoard(level);
 
@@ -80,16 +91,8 @@ namespace SnakeEscape.Presentation
             if (completeUI != null) completeUI.Hide();
         }
 
-        private void LoadCurrentLevel()
-        {
-            if (campaignLevels == null || campaignLevels.Count == 0) return;
-            currentLevelIndex = Mathf.Clamp(currentLevelIndex, 0, campaignLevels.Count - 1);
-            LoadLevel(campaignLevels[currentLevelIndex]);
-        }
-
         private void HandleSnakeSelected(string snakeId)
         {
-            // Input guard: only accept moves when session is ready and idle
             if (Session.CurrentState != GameSession.SessionState.Ready) return;
 
             // Record undo snapshot before move begins
@@ -111,13 +114,19 @@ namespace SnakeEscape.Presentation
             }
             else if (result.Status == MoveStatus.BlockedBySnake)
             {
-                view.AnimateBlocked(result.BlockedAtCell, null);
+                // Collision penalty & visual feedback
+                playerLives = Mathf.Max(0, playerLives - 1);
+                if (hud != null) hud.SetLives(playerLives);
+
+                view.AnimateBlocked(result.BlockedAtCell, () =>
+                {
+                    // Snap back
+                });
             }
         }
 
         private void HandleUndoRequested()
         {
-            // Input guard: cannot undo while animation in progress
             if (Session.CurrentState != GameSession.SessionState.Ready) return;
 
             if (Session.RequestUndo())
@@ -142,10 +151,7 @@ namespace SnakeEscape.Presentation
         private void HandleRestartRequested()
         {
             if (Session.CurrentLevel == null) return;
-            Session.RestartLevel();
-            boardView.SetupBoard(Session.CurrentLevel);
-            if (completeUI != null) completeUI.Hide();
-            UpdateUI();
+            LoadLevelByNumber(currentLevelNumber);
         }
 
         private void HandleLevelComplete()
@@ -158,10 +164,8 @@ namespace SnakeEscape.Presentation
 
         private void HandleNextLevelRequested()
         {
-            if (campaignLevels == null || campaignLevels.Count == 0) return;
-
-            currentLevelIndex = (currentLevelIndex + 1) % campaignLevels.Count;
-            LoadCurrentLevel();
+            currentLevelNumber++;
+            LoadLevelByNumber(currentLevelNumber);
         }
 
         private void UpdateUI()
@@ -169,108 +173,32 @@ namespace SnakeEscape.Presentation
             if (hud != null && Session.CurrentLevel != null)
             {
                 int remaining = Session.CurrentLevel.Snakes.Count - Session.PuzzleState.EscapedSnakeIds.Count;
-                hud.UpdateLevelDisplay(Session.CurrentLevel.LevelId, remaining);
+                string difficulty = Session.CurrentLevel.DifficultyCategory ?? "Normal";
+                hud.UpdateLevelDisplay(Session.CurrentLevel.LevelId, remaining, difficulty);
+                hud.SetLives(playerLives);
                 hud.SetUndoInteractable(Session.UndoService.CanUndo);
             }
         }
 
         /// <summary>
-        /// Creates a mini campaign of 3 progressive levels for initial playtesting:
-        /// Level 1: 2 snakes (A blocked by B)
-        /// Level 2: 3 snakes (A blocked by B, B blocked by C)
-        /// Level 3: 4 snakes (Curved and intersecting paths)
+        /// Compatibility helper for unit tests.
+        /// </summary>
+        public static LevelDefinition CreateSampleLevel()
+        {
+            return LongSpineMazeGenerator.Generate(1);
+        }
+
+        /// <summary>
+        /// Compatibility helper for unit tests.
         /// </summary>
         public static List<LevelDefinition> CreateSampleCampaign()
         {
-            var list = new List<LevelDefinition>();
-
-            // --- Level 1 ---
-            var lvl1 = ScriptableObject.CreateInstance<LevelDefinition>();
-            lvl1.LevelId = "Level 1";
-            lvl1.Cols = 8;
-            lvl1.Rows = 8;
-            var s1A = new SnakeDefinition
+            return new List<LevelDefinition>
             {
-                Id = "snake_A",
-                BodyColor = new Color(0.18f, 0.72f, 0.44f), // Green
-                ExitDirection = GridCoord.Right,
-                BodyCells = new List<GridCoord> { new GridCoord(2, 3), new GridCoord(2, 2), new GridCoord(2, 1) }
+                LongSpineMazeGenerator.Generate(1),
+                LongSpineMazeGenerator.Generate(5),
+                LongSpineMazeGenerator.Generate(10)
             };
-            var s1B = new SnakeDefinition
-            {
-                Id = "snake_B",
-                BodyColor = new Color(0.20f, 0.50f, 0.95f), // Blue
-                ExitDirection = GridCoord.Up,
-                BodyCells = new List<GridCoord> { new GridCoord(4, 3), new GridCoord(4, 2), new GridCoord(4, 1) }
-            };
-            lvl1.Snakes = new List<SnakeDefinition> { s1A, s1B };
-            list.Add(lvl1);
-
-            // --- Level 2 ---
-            var lvl2 = ScriptableObject.CreateInstance<LevelDefinition>();
-            lvl2.LevelId = "Level 2";
-            lvl2.Cols = 8;
-            lvl2.Rows = 8;
-            var s2A = new SnakeDefinition
-            {
-                Id = "snake_A",
-                BodyColor = new Color(0.18f, 0.72f, 0.44f), // Green
-                ExitDirection = GridCoord.Right,
-                BodyCells = new List<GridCoord> { new GridCoord(1, 4), new GridCoord(1, 3), new GridCoord(1, 2) }
-            };
-            var s2B = new SnakeDefinition
-            {
-                Id = "snake_B",
-                BodyColor = new Color(0.20f, 0.50f, 0.95f), // Blue
-                ExitDirection = GridCoord.Up,
-                BodyCells = new List<GridCoord> { new GridCoord(3, 4), new GridCoord(3, 3), new GridCoord(3, 2) }
-            };
-            var s2C = new SnakeDefinition
-            {
-                Id = "snake_C",
-                BodyColor = new Color(0.95f, 0.45f, 0.20f), // Coral/Orange
-                ExitDirection = GridCoord.Right,
-                BodyCells = new List<GridCoord> { new GridCoord(3, 6), new GridCoord(2, 6), new GridCoord(1, 6) }
-            };
-            lvl2.Snakes = new List<SnakeDefinition> { s2A, s2B, s2C };
-            list.Add(lvl2);
-
-            // --- Level 3 ---
-            var lvl3 = ScriptableObject.CreateInstance<LevelDefinition>();
-            lvl3.LevelId = "Level 3";
-            lvl3.Cols = 8;
-            lvl3.Rows = 8;
-            var s3A = new SnakeDefinition
-            {
-                Id = "snake_A",
-                BodyColor = new Color(0.60f, 0.25f, 0.85f), // Purple
-                ExitDirection = GridCoord.Up,
-                BodyCells = new List<GridCoord> { new GridCoord(2, 5), new GridCoord(2, 4), new GridCoord(3, 4), new GridCoord(4, 4) }
-            };
-            var s3B = new SnakeDefinition
-            {
-                Id = "snake_B",
-                BodyColor = new Color(0.15f, 0.75f, 0.75f), // Teal
-                ExitDirection = GridCoord.Right,
-                BodyCells = new List<GridCoord> { new GridCoord(2, 6), new GridCoord(1, 6), new GridCoord(0, 6) }
-            };
-            var s3C = new SnakeDefinition
-            {
-                Id = "snake_C",
-                BodyColor = new Color(0.95f, 0.70f, 0.15f), // Gold
-                ExitDirection = GridCoord.Down,
-                BodyCells = new List<GridCoord> { new GridCoord(5, 3), new GridCoord(5, 4), new GridCoord(5, 5) }
-            };
-            lvl3.Snakes = new List<SnakeDefinition> { s3A, s3B, s3C };
-            list.Add(lvl3);
-
-            return list;
-        }
-
-        public static LevelDefinition CreateSampleLevel()
-        {
-            var campaign = CreateSampleCampaign();
-            return campaign[0];
         }
 
         private void OnDestroy()

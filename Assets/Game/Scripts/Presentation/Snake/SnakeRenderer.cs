@@ -7,18 +7,19 @@ namespace SnakeEscape.Presentation
     /// <summary>
     /// Renders a single snake body via an anti-aliased, tapered LineRenderer and creates
     /// a distinctive organic viper head with tongue.
+    /// Perfectly matches the sleek, delicate proportions of the production design.
     /// </summary>
     [RequireComponent(typeof(LineRenderer))]
     public class SnakeRenderer : MonoBehaviour
     {
         [Header("Appearance")]
-        [SerializeField] private float lineWidth = 0.14f;
-        [SerializeField] private Color defaultBodyColor = new Color(0.04f, 0.06f, 0.12f);
-        [SerializeField] private Color blockedColor = new Color(0.96f, 0.14f, 0.20f);
-        [SerializeField] private Color exitColor = new Color(0.12f, 0.42f, 0.98f);
+        [SerializeField] private float lineWidth = 0.13f;
+        [SerializeField] private Color defaultBodyColor = new Color(0.04f, 0.06f, 0.12f); // Deep Crisp Navy-Black
+        [SerializeField] private Color blockedColor = new Color(0.96f, 0.14f, 0.20f);      // Collision Red
+        [SerializeField] private Color exitColor = new Color(0.12f, 0.42f, 0.98f);         // Royal Blue
 
         private LineRenderer lr;
-        private GameObject headObj;
+        private GameObject headHolder;
         private SpriteRenderer headRenderer;
 
         private static Material sharedLineMaterial;
@@ -60,7 +61,7 @@ namespace SnakeEscape.Presentation
             SetColor(defaultBodyColor);
         }
 
-        public void InitializeVisuals(List<Vector2> worldPoints, GridCoord exitDir, Color color, float customWidth = 0.14f)
+        public void InitializeVisuals(List<Vector2> worldPoints, GridCoord exitDir, Color color, float customWidth = 0.13f)
         {
             SetupLineRenderer();
             lineWidth = customWidth;
@@ -80,45 +81,75 @@ namespace SnakeEscape.Presentation
                 return;
             }
 
-            List<Vector2> smoothed = SmoothCorners(worldPoints);
-            lr.positionCount = smoothed.Count;
-            for (int i = 0; i < smoothed.Count; i++)
+            List<Vector2> rounded = SmoothCorners(worldPoints);
+
+            // Subdivide segments for silky smooth curvature
+            List<Vector3> finalPts = new List<Vector3>();
+            for (int i = 0; i < rounded.Count - 1; i++)
             {
-                lr.SetPosition(i, new Vector3(smoothed[i].x, smoothed[i].y, 0f));
+                Vector2 a = rounded[i];
+                Vector2 b = rounded[i + 1];
+                float segLen = Vector2.Distance(a, b);
+
+                int steps = Mathf.Max(2, Mathf.CeilToInt(segLen / 0.05f));
+                for (int s = 0; s < steps; s++)
+                {
+                    float t = s / (float)steps;
+                    Vector2 pos = Vector2.Lerp(a, b, t);
+                    finalPts.Add(new Vector3(pos.x, pos.y, 0f));
+                }
             }
+
+            Vector2 tail = rounded[rounded.Count - 1];
+            finalPts.Add(new Vector3(tail.x, tail.y, 0f));
+
+            lr.positionCount = finalPts.Count;
+            lr.SetPositions(finalPts.ToArray());
         }
 
         public void UpdateHead(List<Vector2> worldPoints, GridCoord exitDir)
         {
-            if (worldPoints == null || worldPoints.Count == 0)
+            if (worldPoints == null || worldPoints.Count < 2)
             {
-                if (headObj != null) headObj.SetActive(false);
+                if (headHolder != null) headHolder.SetActive(false);
                 return;
             }
 
-            if (headObj == null)
+            if (headHolder == null)
             {
-                headObj = new GameObject("ViperHead");
-                headObj.transform.SetParent(transform, false);
-                headRenderer = headObj.AddComponent<SpriteRenderer>();
+                headHolder = new GameObject("ViperHead");
+                headHolder.transform.SetParent(transform, false);
+
+                GameObject hSpriteObj = new GameObject("HeadWithTongueSprite");
+                hSpriteObj.transform.SetParent(headHolder.transform, false);
+
+                headRenderer = hSpriteObj.AddComponent<SpriteRenderer>();
+                headRenderer.material = new Material(Shader.Find("Sprites/Default"));
                 headRenderer.sprite = GetOrCreateViperHeadSprite();
-                headRenderer.sortingOrder = 6;
+                headRenderer.sortingOrder = lr.sortingOrder + 2;
             }
 
-            headObj.SetActive(true);
-            headObj.transform.position = new Vector3(worldPoints[0].x, worldPoints[0].y, 0f);
+            headHolder.SetActive(true);
 
-            // Orientation
-            Vector2 forwardDir = exitDir.IsCardinalUnit 
+            Vector2 head = worldPoints[0];
+            Vector2 neck = worldPoints[1];
+            Vector2 forwardDir = exitDir.IsCardinalUnit
                 ? new Vector2(exitDir.Col, exitDir.Row)
-                : (worldPoints.Count > 1 ? (worldPoints[0] - worldPoints[1]).normalized : Vector2.up);
+                : (head - neck).normalized;
 
-            float angle = Mathf.Atan2(forwardDir.y, forwardDir.x) * Mathf.Rad2Deg - 90f;
-            headObj.transform.rotation = Quaternion.Euler(0f, 0f, angle);
+            float angle = Mathf.Atan2(forwardDir.y, forwardDir.x) * Mathf.Rad2Deg;
 
-            float headScale = lineWidth * 5.2f;
-            headObj.transform.localScale = new Vector3(headScale, headScale, 1f);
-            headRenderer.color = lr.startColor;
+            headHolder.transform.position = new Vector3(head.x, head.y, 0f);
+            headHolder.transform.rotation = Quaternion.Euler(0f, 0f, angle - 90f);
+
+            // Precise production scale ratio (1.45x line width, perfectly matches sleek body)
+            float scale = lineWidth * 1.45f;
+            headHolder.transform.localScale = Vector3.one * scale;
+
+            if (headRenderer != null)
+            {
+                headRenderer.color = lr.startColor;
+            }
         }
 
         public void SetColor(Color c)
@@ -142,7 +173,7 @@ namespace SnakeEscape.Presentation
         {
             if (pts.Count < 3) return new List<Vector2>(pts);
 
-            List<Vector2> result = new List<Vector2> { pts[0] };
+            List<Vector2> rounded = new List<Vector2> { pts[0] };
             for (int i = 1; i < pts.Count - 1; i++)
             {
                 Vector2 prev = pts[i - 1];
@@ -156,20 +187,26 @@ namespace SnakeEscape.Presentation
 
                 if (l1 > 0.03f && l2 > 0.03f && Vector2.Angle(d1, d2) > 10f)
                 {
-                    float cut = Mathf.Min(l1 * 0.22f, l2 * 0.22f, 0.12f);
+                    float cut = Mathf.Min(l1 * 0.22f, l2 * 0.22f, 0.11f);
                     Vector2 pA = curr - d1.normalized * cut;
                     Vector2 pB = curr + d2.normalized * cut;
-                    result.Add(pA);
-                    result.Add(Vector2.Lerp(pA, pB, 0.5f));
-                    result.Add(pB);
+
+                    rounded.Add(pA);
+                    for (int s = 1; s <= 3; s++)
+                    {
+                        float t = s / 4f;
+                        Vector2 arc = (1f - t) * (1f - t) * pA + 2f * (1f - t) * t * curr + t * t * pB;
+                        rounded.Add(arc);
+                    }
+                    rounded.Add(pB);
                 }
                 else
                 {
-                    result.Add(curr);
+                    rounded.Add(curr);
                 }
             }
-            result.Add(pts[pts.Count - 1]);
-            return result;
+            rounded.Add(pts[pts.Count - 1]);
+            return rounded;
         }
 
         private static Texture2D GenerateAntiAliasedLineTexture()
@@ -246,4 +283,3 @@ namespace SnakeEscape.Presentation
         }
     }
 }
-

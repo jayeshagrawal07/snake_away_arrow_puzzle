@@ -6,6 +6,7 @@ namespace SnakeEscape.Presentation
 {
     /// <summary>
     /// Presentation manager for the game board: creates and manages SnakeViews and the GridRenderer.
+    /// Dynamically scales spacing and line width to fit board dimensions elegantly.
     /// </summary>
     public class BoardView : MonoBehaviour
     {
@@ -24,12 +25,27 @@ namespace SnakeEscape.Presentation
             }
         }
 
-        public void SetupBoard(LevelDefinition level, float cellSpacing = 0.55f)
+        public void SetupBoard(LevelDefinition level)
         {
             Clear();
 
-            Layout = new BoardLayout(level.Cols, level.Rows, cellSpacing);
-            gridRenderer.RenderGrid(Layout);
+            // Dynamic spacing matching production formula
+            float dynamicSpacing = 5.2f / Mathf.Max(level.Cols, level.Rows - 1);
+            float dynamicLineWidth = dynamicSpacing * 0.28f;
+
+            Layout = new BoardLayout(level.Cols, level.Rows, dynamicSpacing);
+
+            // Collect all snake cells to render dots only under snakes
+            List<GridCoord> allSnakeCells = new List<GridCoord>();
+            foreach (var snakeDef in level.Snakes)
+            {
+                if (snakeDef?.BodyCells != null)
+                {
+                    allSnakeCells.AddRange(snakeDef.BodyCells);
+                }
+            }
+
+            gridRenderer.RenderGridUnderSnakes(Layout, allSnakeCells);
 
             if (snakesContainer == null)
             {
@@ -39,17 +55,17 @@ namespace SnakeEscape.Presentation
 
             foreach (var snakeDef in level.Snakes)
             {
-                SpawnSnake(snakeDef);
+                SpawnSnake(snakeDef, dynamicLineWidth);
             }
         }
 
-        private void SpawnSnake(SnakeDefinition def)
+        private void SpawnSnake(SnakeDefinition def, float lineWidth)
         {
             GameObject snakeObj = new GameObject($"Snake_{def.Id}");
             snakeObj.transform.SetParent(snakesContainer.transform, false);
 
             SnakeView view = snakeObj.AddComponent<SnakeView>();
-            view.Initialize(def, Layout);
+            view.Initialize(def, Layout, lineWidth);
 
             activeSnakeViews[def.Id] = view;
         }
@@ -79,4 +95,3 @@ namespace SnakeEscape.Presentation
         }
     }
 }
-

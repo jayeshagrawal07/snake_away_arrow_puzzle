@@ -5,12 +5,12 @@ using UnityEngine;
 namespace SnakeEscape.Presentation
 {
     /// <summary>
-    /// Renders the subtle background dot grid and optional grid boundaries.
+    /// Renders subtle background dot grid under snakes, matching the clean focused aesthetic.
     /// </summary>
     public class GridRenderer : MonoBehaviour
     {
-        [SerializeField] private Color dotColor = new Color(0.82f, 0.85f, 0.90f, 0.85f);
-        [SerializeField] private float dotScale = 0.09f;
+        [SerializeField] private Color dotColor = new Color(0.80f, 0.84f, 0.90f, 0.70f);
+        [SerializeField] private float dotScale = 0.08f;
 
         private static Sprite cachedDotSprite;
         private readonly List<GameObject> activeDotObjects = new List<GameObject>();
@@ -19,33 +19,66 @@ namespace SnakeEscape.Presentation
         public void RenderGrid(BoardLayout layout)
         {
             Clear();
-
-            if (container == null)
-            {
-                container = new GameObject("DotGridContainer");
-                container.transform.SetParent(transform, false);
-            }
-
+            EnsureContainer();
             Sprite dotSprite = GetOrCreateDotSprite();
 
             for (int col = 0; col < layout.Cols; col++)
             {
                 for (int row = 0; row < layout.Rows; row++)
                 {
-                    Vector2 worldPos = layout.GridToWorld(new GridCoord(col, row));
-
-                    GameObject dot = new GameObject($"Dot_{col}_{row}");
-                    dot.transform.SetParent(container.transform, false);
-                    dot.transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
-                    dot.transform.localScale = Vector3.one * dotScale;
-
-                    SpriteRenderer sr = dot.AddComponent<SpriteRenderer>();
-                    sr.sprite = dotSprite;
-                    sr.color = dotColor;
-                    sr.sortingOrder = 0;
-
-                    activeDotObjects.Add(dot);
+                    SpawnDot(layout.GridToWorld(new GridCoord(col, row)), dotSprite);
                 }
+            }
+        }
+
+        public void RenderGridUnderSnakes(BoardLayout layout, IEnumerable<GridCoord> snakeCells)
+        {
+            Clear();
+            EnsureContainer();
+            Sprite dotSprite = GetOrCreateDotSprite();
+
+            HashSet<GridCoord> cellsWithDots = new HashSet<GridCoord>();
+            foreach (var cell in snakeCells)
+            {
+                cellsWithDots.Add(cell);
+                // Also optionally add adjacent cells for subtle buffer
+                for (int d = 0; d < 4; d++)
+                {
+                    var adj = cell + GridCoord.CardinalDirections[d];
+                    if (layout.Cols > adj.Col && adj.Col >= 0 && layout.Rows > adj.Row && adj.Row >= 0)
+                    {
+                        cellsWithDots.Add(adj);
+                    }
+                }
+            }
+
+            foreach (var cell in cellsWithDots)
+            {
+                SpawnDot(layout.GridToWorld(cell), dotSprite);
+            }
+        }
+
+        private void SpawnDot(Vector2 worldPos, Sprite dotSprite)
+        {
+            GameObject dot = new GameObject("Dot");
+            dot.transform.SetParent(container.transform, false);
+            dot.transform.position = new Vector3(worldPos.x, worldPos.y, 0f);
+            dot.transform.localScale = Vector3.one * dotScale;
+
+            SpriteRenderer sr = dot.AddComponent<SpriteRenderer>();
+            sr.sprite = dotSprite;
+            sr.color = dotColor;
+            sr.sortingOrder = 0;
+
+            activeDotObjects.Add(dot);
+        }
+
+        private void EnsureContainer()
+        {
+            if (container == null)
+            {
+                container = new GameObject("DotGridContainer");
+                container.transform.SetParent(transform, false);
             }
         }
 
@@ -91,4 +124,3 @@ namespace SnakeEscape.Presentation
         }
     }
 }
-
