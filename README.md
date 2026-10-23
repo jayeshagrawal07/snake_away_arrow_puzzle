@@ -47,3 +47,4 @@ A 2D mobile logic puzzle game built with Unity. Players remove curved snakes fro
 - [Testing Strategy](Documentation/TESTING.md)
 - [Build and Release](Documentation/BUILD_AND_RELEASE.md)
 - [Changelog](Documentation/CHANGELOG.md)
+

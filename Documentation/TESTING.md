@@ -18,3 +18,4 @@ Will cover:
 
 ## 3. Automated Level Batch Validation
 Runs `PuzzleRules.ValidateLevel` and `PuzzleSolver.Solve` against all `.asset` levels in `Assets/Game/Data/Levels/`.
+

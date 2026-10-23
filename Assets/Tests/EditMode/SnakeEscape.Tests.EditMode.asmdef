@@ -2,10 +2,10 @@
     "name": "SnakeEscape.Tests.EditMode",
     "rootNamespace": "SnakeEscape.Tests",
     "references": [
-        "SnakeEscape.Domain",
-        "SnakeEscape.Application",
         "UnityEngine.TestRunner",
-        "UnityEditor.TestRunner"
+        "UnityEditor.TestRunner",
+        "SnakeEscape.Domain",
+        "SnakeEscape.Application"
     ],
     "includePlatforms": [
         "Editor"
@@ -17,7 +17,9 @@
         "nunit.framework.dll"
     ],
     "autoReferenced": false,
-    "defineConstraints": [],
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
     "versionDefines": [],
     "noEngineReferences": false
 }

@@ -14,3 +14,4 @@
   - Implemented `PuzzleSolver` deterministic BFS solver.
   - Implemented `MoveService`, `UndoService`, `GameSession`, `LevelService`, and `ProgressionService`.
   - Added full NUnit EditMode test suite covering domain rules and solver mechanics.
+

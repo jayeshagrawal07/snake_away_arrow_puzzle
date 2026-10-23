@@ -17,3 +17,4 @@ Snake Escape is a mobile logic puzzle in which players untangle and remove snake
 - **Blocked Move**: Subtle visual feedback (gentle shake, indicator of blocking snake). No destructive penalties in standard puzzle mode.
 - **Undo**: Restores the last escaped snake back to the board.
 - **Restart**: Restores the initial puzzle layout.
+

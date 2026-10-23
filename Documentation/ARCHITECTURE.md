@@ -32,3 +32,4 @@ The project follows a 4-layer architecture with strict separation of concerns an
 - `SnakeEscape.Application` (references `SnakeEscape.Domain`)
 - `SnakeEscape.Tests.EditMode` (references Domain & Application)
 - Presentation & Infrastructure will be configured in subsequent milestones.
+

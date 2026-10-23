@@ -17,3 +17,4 @@
 2. Set Bundle Identifier and Team ID in Xcode.
 3. Verify target SDK is iOS 14.0 or higher.
 4. Archive in Xcode and upload to TestFlight.
+
