@@ -7,26 +7,24 @@ A 2D mobile logic puzzle game built with Unity. Players remove curved snakes fro
 - **Engine**: Unity 6 / LTS (URP 2D)
 - **Language**: C# (.NET Standard 2.1)
 - **Platform**: Android (Primary), iOS (Secondary)
-- **Architecture**: 4-Layer Clean Architecture (Domain, Application, Presentation, Data)
+- **Architecture**: Existing legacy game plus a separate 4-layer implementation under migration
 - **Genre**: Casual Logic / Escape Puzzle
 
 ## Current Status
 
-- **Milestone 1 (Project Foundation & Directory Structure)**: Complete
-- **Milestone 2 (Pure Puzzle Engine)**: Complete
-  - Pure domain models (`GridCoord`, `SnakeDefinition`, `LevelDefinition`, `PuzzleState`, `OccupancyMap`)
-  - Rule engine (`PuzzleRules`) with escape route projection, occupancy collision checks, win validation
-  - Deterministic BFS puzzle solver with memoization (`PuzzleSolver`)
-  - Application orchestration (`GameSession`, `MoveService`, `UndoService`, `LevelService`, `ProgressionService`)
-  - Automated EditMode unit test suite for Domain & Application logic
-- **Next**: Milestone 3 (Clean Presentation layer & Board/Snake views)
+- The existing game scene is `Assets/snake chain game.unity` and remains the project starting point.
+- The legacy gameplay implementation (`Assets/Legacy/GameManager.cs` and `Assets/Legacy/SnakeController.cs`) is still attached to that scene through their preserved Unity asset GUIDs.
+- A newer domain/application/presentation implementation exists separately under `Assets/Game/`; it is not yet integrated into the existing scene.
+- The modular prototype scene was removed because it was not part of the product or build. The editor menu can recreate it when needed.
+- Current focus: preserve the existing scene and migrate or improve its gameplay incrementally, validating behavior as each part changes.
 
 ## Setup Instructions
 
 1. Open Unity Hub.
 2. Add this project folder (`snake chain game`).
 3. Open with Unity 6 (6000.x) or supported LTS.
-4. Open the main scene: `Assets/snake chain game.unity`.
+4. Open `Assets/snake chain game.unity` to continue from the existing game.
+5. This scene is configured as the enabled build scene. `Tools > Snake Escape > Setup Gameplay Scene` creates a separate modular prototype scene and replaces the currently open scene in the Editor; use it only when intentionally testing that prototype.
 
 ## Running Tests
 
@@ -47,4 +45,3 @@ A 2D mobile logic puzzle game built with Unity. Players remove curved snakes fro
 - [Testing Strategy](Documentation/TESTING.md)
 - [Build and Release](Documentation/BUILD_AND_RELEASE.md)
 - [Changelog](Documentation/CHANGELOG.md)
-

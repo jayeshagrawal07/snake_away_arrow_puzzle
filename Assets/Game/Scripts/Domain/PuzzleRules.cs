@@ -3,6 +3,87 @@ using System.Collections.Generic;
 namespace SnakeEscape.Domain
 {
     /// <summary>
+    /// Shared grid geometry for projecting a snake's straight exit path.
+    /// </summary>
+    public static class EscapeRouteGeometry
+    {
+        /// <summary>
+        /// Returns the in-bounds cells starting one step ahead of the head and ending
+        /// immediately before the board edge. The head cell is not included.
+        /// </summary>
+        public static List<GridCoord> ComputeInBoundsRoute(
+            GridCoord head,
+            GridCoord direction,
+            int cols,
+            int rows)
+        {
+            if (cols < 1) throw new System.ArgumentOutOfRangeException(nameof(cols));
+            if (rows < 1) throw new System.ArgumentOutOfRangeException(nameof(rows));
+            if (!direction.IsCardinalUnit)
+                throw new System.ArgumentException("Exit direction must be a cardinal unit vector.", nameof(direction));
+
+            var route = new List<GridCoord>();
+            GridCoord current = head + direction;
+
+            while (current.Col >= 0 && current.Col < cols && current.Row >= 0 && current.Row < rows)
+            {
+                route.Add(current);
+                current += direction;
+            }
+
+            return route;
+        }
+
+        /// <summary>
+        /// Counts route cells before the first cell reported as blocked.
+        /// Returns the full route length when no cell is blocked.
+        /// </summary>
+        public static int CountClearCellsBeforeBlock(
+            IReadOnlyList<GridCoord> route,
+            System.Predicate<GridCoord> isBlocked)
+        {
+            if (route == null) throw new System.ArgumentNullException(nameof(route));
+            if (isBlocked == null) throw new System.ArgumentNullException(nameof(isBlocked));
+
+            for (int i = 0; i < route.Count; i++)
+            {
+                if (isBlocked(route[i]))
+                    return i;
+            }
+
+            return route.Count;
+        }
+
+        public static MoveResult EvaluateMove(
+            string snakeId,
+            GridCoord head,
+            GridCoord direction,
+            int cols,
+            int rows,
+            System.Func<GridCoord, string> findBlockingSnake,
+            out int clearCells)
+        {
+            if (findBlockingSnake == null)
+                throw new System.ArgumentNullException(nameof(findBlockingSnake));
+
+            var route = ComputeInBoundsRoute(head, direction, cols, rows);
+            for (int i = 0; i < route.Count; i++)
+            {
+                string blockingSnakeId = findBlockingSnake(route[i]);
+                if (string.IsNullOrEmpty(blockingSnakeId))
+                    continue;
+
+                clearCells = i;
+                return MoveResult.Blocked(snakeId, blockingSnakeId, route[i]);
+            }
+
+            clearCells = route.Count;
+            route.Add(head + direction * (route.Count + 1));
+            return MoveResult.Valid(snakeId, route);
+        }
+    }
+
+    /// <summary>
     /// Pure, stateless puzzle logic.
     /// All methods take explicit inputs and return results; no side effects.
     /// Do NOT add Unity MonoBehaviour or scene references here.
@@ -26,13 +107,13 @@ namespace SnakeEscape.Domain
             if (snake == null || level == null || !snake.ExitDirection.IsCardinalUnit)
                 return route;
 
-            GridCoord current = snake.HeadCell + snake.ExitDirection;
-            while (level.IsInBounds(current))
-            {
-                route.Add(current);
-                current = current + snake.ExitDirection;
-            }
-            route.Add(current); // First out-of-bounds cell = visual exit target
+            route = EscapeRouteGeometry.ComputeInBoundsRoute(
+                snake.HeadCell,
+                snake.ExitDirection,
+                level.Cols,
+                level.Rows);
+            GridCoord exitCell = snake.HeadCell + snake.ExitDirection * (route.Count + 1);
+            route.Add(exitCell); // First out-of-bounds cell = visual exit target
             return route;
         }
 

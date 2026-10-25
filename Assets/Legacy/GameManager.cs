@@ -4,6 +4,7 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using SnakeEscape.Domain;
 
 public class GameManager : MonoBehaviour
 {
@@ -37,6 +38,7 @@ public class GameManager : MonoBehaviour
     [HideInInspector] public float currentSpacing = 0.45f;
 
     private List<SnakeController> activeSnakes = new List<SnakeController>();
+    private List<SnakeController> levelSnakes = new List<SnakeController>();
     private List<Image> heartImages = new List<Image>();
     private GameObject dotGridContainer;
     private GameObject gridGuideLinesContainer;
@@ -48,6 +50,7 @@ public class GameManager : MonoBehaviour
     private int lockedLevelSeed = 0;
     private int lastGeneratedLevel = -1;
     private int challengeRunCount = 0;
+    private int levelGeneration = 0;
     private bool isCurrentChallengeUnlocked = false;
 
     // Milestone & Timer State (3 Minutes = 180s)
@@ -123,6 +126,7 @@ public class GameManager : MonoBehaviour
     private Sprite gridGuideButtonSprite;
     private Sprite rulerBigIconSprite;
     private Sprite gearIconSprite;
+    private Sprite yellowSunburstBackgroundSprite;
 
 #if UNITY_EDITOR
     void OnValidate()
@@ -177,10 +181,10 @@ public class GameManager : MonoBehaviour
         }
 
         currentLevel = Mathf.Max(1, PlayerPrefs.GetInt("SnakePuzzle_Level", 1));
-        remainingHints = PlayerPrefs.GetInt("SnakePuzzle_Hints", 1);
-        remainingGridGuides = PlayerPrefs.GetInt("SnakePuzzle_Grids", 1);
-        playerCoins = PlayerPrefs.GetInt("SnakePuzzle_Coins", 760);
-        challengeRunCount = PlayerPrefs.GetInt("SnakePuzzle_ChallengeRuns", 0);
+        remainingHints = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Hints", 1));
+        remainingGridGuides = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Grids", 1));
+        playerCoins = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Coins", 760));
+        challengeRunCount = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_ChallengeRuns", 0));
         isCurrentChallengeUnlocked = PlayerPrefs.GetInt("SnakePuzzle_ChallengeUnlocked", 0) == 1;
         hapticsEnabled = PlayerPrefs.GetInt("SnakePuzzle_Haptics", 1) == 1;
     }
@@ -194,6 +198,12 @@ public class GameManager : MonoBehaviour
 
     void SaveProgress()
     {
+        currentLevel = Mathf.Max(1, currentLevel);
+        remainingHints = Mathf.Max(0, remainingHints);
+        remainingGridGuides = Mathf.Max(0, remainingGridGuides);
+        playerCoins = Mathf.Max(0, playerCoins);
+        challengeRunCount = Mathf.Max(0, challengeRunCount);
+
         PlayerPrefs.SetInt("SnakePuzzle_Level", currentLevel);
         PlayerPrefs.SetInt("SnakePuzzle_Hints", remainingHints);
         PlayerPrefs.SetInt("SnakePuzzle_Grids", remainingGridGuides);
@@ -215,7 +225,7 @@ public class GameManager : MonoBehaviour
 
     void AddCoins(int amount)
     {
-        playerCoins += amount;
+        playerCoins = (int)System.Math.Min(int.MaxValue, (long)playerCoins + amount);
         SaveProgress();
         UpdateCoinAndHintUI();
     }
@@ -255,7 +265,7 @@ public class GameManager : MonoBehaviour
                 timeRemaining = 0f;
                 isTimerActive = false;
                 UpdateTimerUI();
-                StartCoroutine(ShowGameOverModalAfterDelay());
+                StartCoroutine(ShowGameOverModalAfterDelay(levelGeneration));
                 return;
             }
             UpdateTimerUI();
@@ -424,6 +434,7 @@ public class GameManager : MonoBehaviour
         brokenHeart3DSprite = CreatePlump3DHeartSprite(256, true);
         goldCoinSprite = CreateGoldStarCoinSprite(128);
         yellowSunburstCardSprite = CreateYellowSunburstSprite(512, 512);
+        yellowSunburstBackgroundSprite = CreateYellowSunburstSprite(512, 512, false);
         sunburstRaysOverlaySprite = CreateRotatingSunburstRaysSprite(512);
         videoAdIconSprite = CreateVideoAdClapperSprite(128);
         snakeCountIconSprite = CreateCrispSnakeBadgeIcon(256);
@@ -937,7 +948,7 @@ public class GameManager : MonoBehaviour
         winModalObj.transform.SetParent(canvasTr, false);
 
         Image bg = winModalObj.AddComponent<Image>();
-        bg.sprite = yellowSunburstCardSprite;
+        bg.sprite = yellowSunburstBackgroundSprite;
         bg.color = Color.white;
         RectTransform rt = winModalObj.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
@@ -1775,6 +1786,8 @@ public class GameManager : MonoBehaviour
     // Point 9: Daily Challenge with 150-200 Snakes & 3-Minute Timer (180s)!
     public void StartChallengeGameplay(bool advancePatternSeed)
     {
+        ResetLevelTransitionEffects();
+
         if (advancePatternSeed)
         {
             challengeRunCount++;
@@ -1793,9 +1806,7 @@ public class GameManager : MonoBehaviour
         if (gameOverModalObj != null) gameOverModalObj.SetActive(false);
         if (praiseFloatingObj != null) praiseFloatingObj.SetActive(false);
 
-        foreach (var s in activeSnakes)
-            if (s != null) Destroy(s.gameObject);
-        activeSnakes.Clear();
+        DestroyLevelSnakes();
         if (gridGuideLinesContainer != null) Destroy(gridGuideLinesContainer);
 
         lives = 3;
@@ -1858,11 +1869,13 @@ public class GameManager : MonoBehaviour
 
     void PlaySimulatedVideoAd(System.Action onRewardGranted)
     {
-        StartCoroutine(SimulateVideoAdRoutine(onRewardGranted));
+        StartCoroutine(SimulateVideoAdRoutine(onRewardGranted, levelGeneration));
     }
 
-    IEnumerator SimulateVideoAdRoutine(System.Action onRewardGranted)
+    IEnumerator SimulateVideoAdRoutine(System.Action onRewardGranted, int generation)
     {
+        if (generation != levelGeneration) yield break;
+
         if (adSimOverlayObj != null)
         {
             adSimOverlayObj.SetActive(true);
@@ -1872,12 +1885,14 @@ public class GameManager : MonoBehaviour
         float remaining = 1.3f;
         while (remaining > 0f)
         {
+            if (generation != levelGeneration) yield break;
             if (adSimTimerText != null)
                 adSimTimerText.text = $"Video Ad Playing...\n\n<size=34>Reward in {Mathf.CeilToInt(remaining)}s</size>";
             remaining -= Time.unscaledDeltaTime;
             yield return null;
         }
 
+        if (generation != levelGeneration) yield break;
         if (adSimOverlayObj != null) adSimOverlayObj.SetActive(false);
         onRewardGranted?.Invoke();
     }
@@ -2019,27 +2034,38 @@ public class GameManager : MonoBehaviour
 
     public bool CheckPathClearAndDistance(SnakeController snake, out int freeSteps)
     {
+        return EvaluateEscapeMove(snake, out freeSteps).IsValid;
+    }
+
+    public MoveResult EvaluateEscapeMove(SnakeController snake, out int freeSteps)
+    {
         freeSteps = 0;
         Vector2Int head = snake.GetGridHead();
-        Vector2Int dir = snake.GetGridForwardDir();
-
-        Vector2Int curr = head + dir;
-        while (curr.x >= 0 && curr.x < currentCols && curr.y >= 0 && curr.y < currentRows)
-        {
-            for (int i = 0; i < activeSnakes.Count; i++)
+        Vector2Int direction = snake.GetGridForwardDir();
+        return EscapeRouteGeometry.EvaluateMove(
+            snake.gameObject.name,
+            new GridCoord(head.x, head.y),
+            new GridCoord(direction.x, direction.y),
+            currentCols,
+            currentRows,
+            cell =>
             {
-                SnakeController other = activeSnakes[i];
-                if (other == null || other == snake || other.isCleared) continue;
-                if (other.gridCells.Contains(curr)) return false;
-            }
-            freeSteps++;
-            curr += dir;
-        }
-        return true;
+                for (int i = 0; i < activeSnakes.Count; i++)
+                {
+                    SnakeController other = activeSnakes[i];
+                    if (other == null || other == snake || other.isCleared) continue;
+                    if (other.gridCells.Contains(new Vector2Int(cell.Col, cell.Row)))
+                        return other.gameObject.name;
+                }
+                return null;
+            },
+            out freeSteps);
     }
 
     public void LoadLevel(int level)
     {
+        ResetLevelTransitionEffects();
+
         isChallengeMode = false;
         isPaused = false;
         isGridGuideActiveThisLevel = false;
@@ -2055,9 +2081,7 @@ public class GameManager : MonoBehaviour
         if (praiseFloatingObj != null) praiseFloatingObj.SetActive(false);
         if (gridGuideLinesContainer != null) Destroy(gridGuideLinesContainer);
 
-        foreach (var s in activeSnakes)
-            if (s != null) Destroy(s.gameObject);
-        activeSnakes.Clear();
+        DestroyLevelSnakes();
 
         lives = 3;
         UpdateHeartsUI();
@@ -2099,6 +2123,34 @@ public class GameManager : MonoBehaviour
 
         initialSnakeCountInLevel = activeSnakes.Count;
         UpdateSnakeCounter();
+    }
+
+    void ResetLevelTransitionEffects()
+    {
+        levelGeneration++;
+        if (adSimOverlayObj != null)
+            adSimOverlayObj.SetActive(false);
+        if (confettiContainer == null) return;
+
+        for (int i = confettiContainer.childCount - 1; i >= 0; i--)
+        {
+            Transform piece = confettiContainer.GetChild(i);
+            piece.gameObject.SetActive(false);
+            Destroy(piece.gameObject);
+        }
+    }
+
+    void DestroyLevelSnakes()
+    {
+        foreach (SnakeController snake in levelSnakes)
+        {
+            if (snake == null) continue;
+            snake.gameObject.SetActive(false);
+            Destroy(snake.gameObject);
+        }
+
+        levelSnakes.Clear();
+        activeSnakes.Clear();
     }
 
     void BuildTutorialLevel1()
@@ -2414,6 +2466,7 @@ public class GameManager : MonoBehaviour
         SnakeController sc = sObj.AddComponent<SnakeController>();
         sc.InitSnake(chosenSnake, worldPts, snakeWidth);
         activeSnakes.Add(sc);
+        levelSnakes.Add(sc);
     }
 
     bool IsCellInsideShape(int x, int y, int cols, int rows, int shape, int seed)
@@ -2629,15 +2682,20 @@ public class GameManager : MonoBehaviour
                 PlayerPrefs.Save();
             }
 
-            StartCoroutine(Celebrate3SecondsAndShowWinScreen(heartCount, coinsEarned));
+            StartCoroutine(Celebrate3SecondsAndShowWinScreen(heartCount, coinsEarned, levelGeneration));
         }
     }
 
-    IEnumerator Celebrate3SecondsAndShowWinScreen(int heartCount, int coinsEarned)
+    public void OnSnakeEscapeAnimationFinished(SnakeController snake)
+    {
+        levelSnakes.Remove(snake);
+    }
+
+    IEnumerator Celebrate3SecondsAndShowWinScreen(int heartCount, int coinsEarned, int generation)
     {
         string praiseMsg = (heartCount == 3) ? "Awesome!" : (heartCount == 2) ? "Fabulous!" : "Well Done!";
 
-        StartCoroutine(SpawnConfettiBurstRoutine(3.0f));
+        StartCoroutine(SpawnConfettiBurstRoutine(3.0f, generation));
 
         if (praiseFloatingObj != null && praiseFloatingText != null)
         {
@@ -2648,6 +2706,7 @@ public class GameManager : MonoBehaviour
             float elapsed = 0f;
             while (elapsed < 3.0f)
             {
+                if (generation != levelGeneration) yield break;
                 elapsed += Time.deltaTime;
                 float pop = (elapsed < 0.25f)
                     ? Mathf.SmoothStep(0f, 1.08f, elapsed / 0.25f)
@@ -2661,6 +2720,8 @@ public class GameManager : MonoBehaviour
         {
             yield return new WaitForSeconds(3.0f);
         }
+
+        if (generation != levelGeneration) yield break;
 
         if (winModalObj != null)
         {
@@ -2680,7 +2741,7 @@ public class GameManager : MonoBehaviour
 
             winModalObj.transform.SetAsLastSibling();
             winModalObj.SetActive(true);
-            StartCoroutine(SpawnConfettiBurstRoutine(2.5f));
+            StartCoroutine(SpawnConfettiBurstRoutine(2.5f, generation));
         }
         else
         {
@@ -2688,9 +2749,9 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    IEnumerator SpawnConfettiBurstRoutine(float duration)
+    IEnumerator SpawnConfettiBurstRoutine(float duration, int generation)
     {
-        if (confettiContainer == null) yield break;
+        if (confettiContainer == null || generation != levelGeneration) yield break;
         confettiContainer.SetAsLastSibling();
 
         Color[] palette = new Color[] {
@@ -2726,6 +2787,7 @@ public class GameManager : MonoBehaviour
         float elapsed = 0f;
         while (elapsed < duration)
         {
+            if (generation != levelGeneration) yield break;
             elapsed += Time.deltaTime;
             for (int i = 0; i < pieces.Count; i++)
             {
@@ -2756,14 +2818,16 @@ public class GameManager : MonoBehaviour
             StartCoroutine(AnimateBrokenHeartAndFlash(lives));
 
             if (lives <= 0)
-                StartCoroutine(ShowGameOverModalAfterDelay());
+                StartCoroutine(ShowGameOverModalAfterDelay(levelGeneration));
         }
     }
 
-    IEnumerator ShowGameOverModalAfterDelay()
+    IEnumerator ShowGameOverModalAfterDelay(int generation)
     {
         isPaused = true;
         yield return new WaitForSeconds(0.55f);
+        if (generation != levelGeneration) yield break;
+
         if (gameOverModalObj != null)
         {
             gameOverModalObj.transform.SetAsLastSibling();
@@ -2850,7 +2914,7 @@ public class GameManager : MonoBehaviour
     // --- STUDIO-GRADE PROCEDURAL SPRITE GENERATORS ---
 
     // Point 11: Yellow & Light-Yellow Radial Sunburst Card Sprite!
-    Sprite CreateYellowSunburstSprite(int w, int h)
+    Sprite CreateYellowSunburstSprite(int w, int h, bool roundedCorners = true)
     {
         Texture2D t = new Texture2D(w, h, TextureFormat.RGBA32, false);
         t.filterMode = FilterMode.Bilinear;
@@ -2866,10 +2930,14 @@ public class GameManager : MonoBehaviour
         {
             for (int x = 0; x < w; x++)
             {
-                float cx = Mathf.Clamp(x, cornerRadius, w - cornerRadius);
-                float cy = Mathf.Clamp(y, cornerRadius, h - cornerRadius);
-                float edgeDist = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
-                float alpha = Mathf.Clamp01((cornerRadius - edgeDist) / 1.8f);
+                float alpha = 1f;
+                if (roundedCorners)
+                {
+                    float cx = Mathf.Clamp(x, cornerRadius, w - cornerRadius);
+                    float cy = Mathf.Clamp(y, cornerRadius, h - cornerRadius);
+                    float edgeDist = Vector2.Distance(new Vector2(x, y), new Vector2(cx, cy));
+                    alpha = Mathf.Clamp01((cornerRadius - edgeDist) / 1.8f);
+                }
 
                 if (alpha <= 0f)
                 {

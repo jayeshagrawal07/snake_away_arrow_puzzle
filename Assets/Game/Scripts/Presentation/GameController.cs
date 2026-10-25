@@ -95,9 +95,6 @@ namespace SnakeEscape.Presentation
         {
             if (Session.CurrentState != GameSession.SessionState.Ready) return;
 
-            // Record undo snapshot before move begins
-            Session.UndoService.RecordSnapshot(Session.PuzzleState);
-
             var result = Session.RequestMove(snakeId);
 
             SnakeView view = boardView.GetSnakeView(snakeId);
@@ -105,6 +102,7 @@ namespace SnakeEscape.Presentation
 
             if (result.IsValid)
             {
+                Session.UndoService.RecordSnapshot(Session.PuzzleState);
                 view.AnimateEscape(result.EscapeRoute, () =>
                 {
                     boardView.RemoveSnakeView(snakeId);
@@ -127,10 +125,13 @@ namespace SnakeEscape.Presentation
 
         private void HandleUndoRequested()
         {
-            if (Session.CurrentState != GameSession.SessionState.Ready) return;
+            if (Session.CurrentState != GameSession.SessionState.Ready &&
+                Session.CurrentState != GameSession.SessionState.LevelComplete) return;
 
             if (Session.RequestUndo())
             {
+                if (completeUI != null) completeUI.Hide();
+
                 // Rebuild presentation board from restored snapshot
                 boardView.SetupBoard(Session.CurrentLevel);
 

@@ -1,31 +1,39 @@
 # 📊 Snake Escape — Project Progress & Task Tracker
 
 > Specification reference: [`SNAKE_ESCAPE_PRODUCTION_PLAN.md`](./SNAKE_ESCAPE_PRODUCTION_PLAN.md)  
-> Last updated: **October 24, 2026**
+> Last updated: **October 26, 2026**
 
 ---
 
-## 📈 Milestone Overview
+## Current Direction: Improve the Existing Game
 
-```
-[████████████████████░] ~65% Complete Overall
-```
+The existing scene, `Assets/snake chain game.unity`, is the product starting point. It contains the legacy `GameManager`-driven game and its existing UI. The newer `Assets/Game/` architecture remains separate and has not replaced or been integrated into the existing scene. Its unused prototype scene was removed during cleanup; the Editor setup menu can recreate it. Do not delete or regenerate the existing scene/UI as part of cleanup.
 
-| Milestone | Description | Status | Target / Notes |
-|:---|:---|:---:|:---|
-| **M1** | Repository Audit & Project Foundation | ✅ Complete | Directory structure, asmdefs, docs |
-| **M2** | Pure Puzzle Engine (Domain & App Layer) | ✅ Complete | Pure C# logic, rules, solver, EditMode tests |
-| **M3** | First Playable Level (Clean Presentation) | ✅ Complete | BoardView, SnakeView, SnakeRenderer, input |
-| **M4** | Reliable Gameplay Systems | ✅ Complete | Undo, restart, pause, transition guards, scene tooling |
-| **M5** | Level Authoring & Solver Tooling | 🟡 In Progress | Visual level editor window, campaign batch validator |
-| **M6** | Campaign & Progression | ⏳ Pending | 30 verified levels, save/load, level select |
-| **M7** | UI, Art & Audio Polish | ⏳ Pending | SFX, BGM, haptics, responsive HUD |
-| **M8** | QA & Optimization | ⏳ Pending | PlayMode tests, device profiling, edge cases |
-| **M9** | Release Preparation | ⏳ Pending | Android/iOS build config, store assets, privacy |
+The former overall-completion percentage and milestone checkmarks have been removed because they mixed progress on the separate implementation with progress on the actual game.
+
+| Area | Current evidence-based status |
+|:---|:---|
+| Existing game | Scene and legacy gameplay scripts are present; preserve them as the baseline. |
+| New puzzle engine | Domain, application, and presentation code exists separately; migrate selectively where it improves the existing game. |
+| Existing-scene integration | Not complete. The original scene still uses the legacy scripts. |
+| Build launch scene | Configured to `Assets/snake chain game.unity`. |
+| Campaign, authoring, release readiness | Not verified as complete; assess after the existing gameplay migration. |
+
+## Migration Plan
+
+1. **Preserve and baseline** — Keep the existing scene and UI, identify the current gameplay flows, and establish what must continue working.
+2. **Integrate one behavior at a time** — Start with snake selection/move validation and the already-reported undo behavior. Keep existing visuals and input where possible; route rules through the reusable domain logic only where compatible.
+3. **Verify each integration** — Test normal moves, blocked moves, undo (including a snake restored to a cell another route crosses), restart, and level completion in the existing scene.
+4. **Continue by subsystem** — Migrate progression/save behavior and other responsibilities only after the move flow is stable.
+5. **Clean up after parity** — Remove duplicate or obsolete code only after the existing scene uses the replacement and its behavior is verified.
+
+No whole-scene rewrite or broad cleanup is planned.
 
 ---
 
-## ✅ Completed Work
+## Existing Implementation Inventory (Not Yet Migrated)
+
+The checklist below describes components found in the newer `Assets/Game/` implementation. It is an inventory of existing work, not evidence that those components are running in `Assets/snake chain game.unity` or that the corresponding production milestone is complete.
 
 ### Milestone 1: Project Foundation
 - [x] Standardized folder architecture established under `Assets/Game/`, `Assets/Tests/`, and `Documentation/`.
@@ -106,23 +114,46 @@
 - [x] **Multi-Level Progression**:
   - Seamless campaign loop across Level 1, Level 2, and Level 3 on completion.
 - [x] **Scene Setup Automation**:
-  - Added `Tools > Snake Escape > Setup Gameplay Scene` menu item to create `Assets/Game/Scenes/Gameplay.unity` in one click.
+  - Added `Tools > Snake Escape > Setup Gameplay Scene` menu item to generate the modular prototype scene on demand.
 
 ---
 
-## 🟡 Current Sprint: Milestone 3 (First Playable Level)
+## Current Sprint: Existing-Scene Audit and Incremental Integration
 
-- [ ] **Board Presentation**:
-  - Create `BoardView.cs` (calculates world-space grid positioning, responsive camera bounds).
-  - Create `GridRenderer.cs` (subtle dots/lines rendering for cell alignment).
-- [ ] **Snake Presentation**:
-  - Create `SnakeRenderer.cs` (port clean anti-aliased tapered `LineRenderer` from prototype).
-  - Create `SnakeAnimator.cs` (slither motion along escape route, head-first following).
-  - Create `SnakeView.cs` (composite component handling tap detection & visual states).
-- [ ] **Input & Game Wiring**:
-  - Connect tap/click raycasting directly to `GameSession.RequestMove()`.
-  - Handle move feedback (blocked shake vs. smooth escape slither).
-  - Trigger win feedback when `GameSession.OnLevelComplete` fires.
+- [x] Fix completion-screen background edges in the original UI by using square-edged full-screen artwork while preserving rounded popup-card artwork.
+- [x] User confirmed the completion-screen edges look correct in Unity Game view.
+- [ ] Verify the completion screen on a device or a different aspect ratio.
+- [x] Confirm the existing scene contains the legacy game manager and EventSystem.
+- [x] Configure the existing scene as the enabled build scene.
+- [x] Clarify in project documentation that the newer gameplay scene is separate and not the migration target.
+- [x] Map the original scene's startup, level representation, input, route check, blocked/successful moves, completion, restart, pause, hint/guide, and persistence flows by static inspection.
+- [x] Compare legacy and modular grid/path/exit rules; document direction and move-timing mismatches before integration.
+- [x] User reported the original scene's clear escape, blocked-move penalty/return, and concurrent escape behavior worked after the first shared-route extraction (before the latest edits).
+- [x] Share cardinal in-bounds route geometry between modular rules and legacy route checking without changing legacy penalties, animations, or concurrent-move behavior.
+- [x] Extract first-blocker route traversal/count for both modular geometry and legacy route checking; keep legacy snake occupancy lookup and move timing in `GameManager`.
+- [x] Adapt the original scene's legacy occupancy check to shared `MoveResult` results without changing the life penalty, blocked animation, or concurrent escape scheduling.
+- [x] Fix restart/challenge cleanup so snakes already animating out are also deactivated and destroyed.
+- [x] Invalidate old completion/confetti effects when a new level or challenge starts, preventing stale celebration UI after restart.
+- [x] User confirmed the restart/celebration lifecycle checks are working in Play mode; this is manual user-reported validation.
+- [x] Guard delayed game-over UI with the level-generation token so an old defeat coroutine cannot show over a restarted level or challenge.
+- [x] Cancel simulated-ad overlays and suppress stale reward callbacks when the level or challenge resets during an ad.
+- [x] User confirmed the delayed-game-over/restart and restart-during-simulated-ad flows work in Play mode.
+- [x] Clamp negative saved level/resource/currency counters during load and save; saturate coin rewards instead of allowing integer overflow.
+- [x] Build `Assembly-CSharp` and `SnakeEscape.Tests.EditMode` after the save-value hardening (0 warnings/errors).
+- [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
+- [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
+- [x] Unity batch-mode EditMode run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped), including blocker-count, legacy parity, and valid/blocked result payload tests.
+- [x] Add a legacy path-conversion parity fixture for all cardinal directions and first-blocker counting.
+- [x] Compile the updated EditMode test assembly after adding the parity fixture (0 warnings/errors); subsequent Unity batch-mode execution confirms the focused tests passed.
+- [x] Run blocker-count, parity-fixture, and result-payload tests in Unity batch-mode Test Runner.
+- [x] Build the delayed-game-over guard and EditMode test assembly (both builds completed with 0 warnings/errors).
+- [x] Unity batch-mode EditMode regression run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped).
+- [x] Run the full Unity batch-mode EditMode suite after save hardening and cleanup; Unity compiled the project and ran 62 tests (60 passed, 2 failed).
+- [ ] Investigate `GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`; these failures are outside the file cleanup and were not changed here.
+- [ ] Manually test negative/corrupt stored resource values and coin totals near `int.MaxValue`.
+- [ ] Continue save/progression audit: add a versioned schema and explicit recovery policy before changing any existing keys.
+- [x] User confirmed the restart/celebration, game-over/restart, and restart-during-simulated-ad lifecycle checks are working in Play mode.
+- [x] Record source/build/EditMode-test evidence and the remaining PlayMode limitation before continuing lifecycle work.
 
 ---
 
@@ -152,6 +183,5 @@
 - [ ] Multiplayer untangling race (placeholder modal exists in prototype).
 
 ### Technical Debt / Cleanup
-- [ ] Gradually decommission and delete legacy God Object `GameManager.cs` once new modular presentation layer is active.
+- [ ] Refactor responsibilities out of legacy `GameManager.cs` incrementally, only after replacement behavior is integrated and verified in the existing scene.
 - [ ] Convert procedural button generation to modular UI prefabs.
-

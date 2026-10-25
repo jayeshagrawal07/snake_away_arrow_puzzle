@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using SnakeEscape.Domain;
 using UnityEngine;
 
 [RequireComponent(typeof(LineRenderer))]
@@ -245,7 +246,8 @@ public class SnakeController : MonoBehaviour
         isMoving = true;
 
         int freeCellsAhead;
-        bool clear = GameManager.Instance.CheckPathClearAndDistance(this, out freeCellsAhead);
+        MoveResult result = GameManager.Instance.EvaluateEscapeMove(this, out freeCellsAhead);
+        bool clear = result.IsValid;
 
         if (!clear)
         {
@@ -338,6 +340,8 @@ public class SnakeController : MonoBehaviour
                 yield return null;
             }
 
+            if (GameManager.Instance != null)
+                GameManager.Instance.OnSnakeEscapeAnimationFinished(this);
             Destroy(gameObject);
         }
     }

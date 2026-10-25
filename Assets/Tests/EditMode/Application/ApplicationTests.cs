@@ -87,6 +87,54 @@ namespace SnakeEscape.Tests
         }
 
         [Test]
+        public void GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy()
+        {
+            var passingSnake = MakeSnake("passing", GridCoord.Right, new GridCoord(0, 1));
+            var escapingSnake = MakeSnake("escaping", GridCoord.Up, new GridCoord(2, 1));
+            var level = MakeLevel(4, 4, passingSnake, escapingSnake);
+
+            var session = new GameSession();
+            session.LoadLevel(level);
+
+            Assert.AreEqual(MoveStatus.BlockedBySnake, session.RequestMove("passing").Status);
+            Assert.IsTrue(session.RequestMove("escaping").IsValid);
+            session.UndoService.RecordSnapshot(session.PuzzleState);
+            session.CommitMove("escaping");
+
+            Assert.IsTrue(session.PuzzleState.EscapedSnakeIds.Contains("escaping"));
+            Assert.IsTrue(session.RequestMove("passing").IsValid);
+            session.CommitMove("passing");
+
+            Assert.IsTrue(session.RequestUndo());
+
+            Assert.AreSame(session.MoveService.State, session.PuzzleState);
+            Assert.IsFalse(session.PuzzleState.EscapedSnakeIds.Contains("passing"));
+            Assert.IsTrue(session.PuzzleState.EscapedSnakeIds.Contains("escaping"));
+            Assert.AreEqual("escaping", session.PuzzleState.Occupancy.GetOccupant(new GridCoord(2, 1)));
+            Assert.AreEqual(MoveStatus.BlockedBySnake, session.RequestMove("passing").Status);
+        }
+
+        [Test]
+        public void GameSession_UndoAfterLevelCompletionReturnsToReady()
+        {
+            var snake = MakeSnake("s1", GridCoord.Right, new GridCoord(0, 0));
+            var session = new GameSession();
+            session.LoadLevel(MakeLevel(8, 8, snake));
+
+            session.UndoService.RecordSnapshot(session.PuzzleState);
+            Assert.IsTrue(session.RequestMove("s1").IsValid);
+            session.CommitMove("s1");
+            Assert.AreEqual(GameSession.SessionState.LevelComplete, session.CurrentState);
+
+            Assert.IsTrue(session.RequestUndo());
+
+            Assert.AreEqual(GameSession.SessionState.Ready, session.CurrentState);
+            Assert.AreSame(session.MoveService.State, session.PuzzleState);
+            Assert.IsFalse(session.PuzzleState.IsComplete);
+            Assert.IsTrue(session.PuzzleState.Occupancy.IsOccupied(new GridCoord(0, 0)));
+        }
+
+        [Test]
         public void GameSession_FullLifecycle()
         {
             var s1 = MakeSnake("s1", GridCoord.Right, new GridCoord(0, 0));
@@ -111,4 +159,3 @@ namespace SnakeEscape.Tests
         }
     }
 }
-

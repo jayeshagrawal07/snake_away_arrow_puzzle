@@ -84,7 +84,18 @@ namespace SnakeEscape.Application
             MoveService.CommitMove(snakeId);
         }
 
-        public bool RequestUndo() => UndoService.Undo();
+        public bool RequestUndo()
+        {
+            if (CurrentState != SessionState.Ready && CurrentState != SessionState.LevelComplete)
+                return false;
+
+            if (!UndoService.Undo())
+                return false;
+
+            PuzzleState = MoveService.State;
+            Transition(SessionState.Ready);
+            return true;
+        }
 
         // ── Pause ─────────────────────────────────────────────────────
 
