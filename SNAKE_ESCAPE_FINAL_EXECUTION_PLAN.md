@@ -1,8 +1,8 @@
 # Snake Escape — Final Execution Plan
 
-**Purpose:** The single working plan for continuing development from the repository's current state to a tested Android release, while preserving the existing game and integrating the modular implementation safely.
+**Purpose:** The single working plan for continuing development from the repository's current state to a tested Android release, prioritizing the existing game and improving its systems incrementally.
 
-**Basis:** Reconciles `SNAKE_ESCAPE_PRODUCTION_PLAN.md` (target specification) with `PROJECT_HANDOFF_FOR_AI.md` (repository inventory inspected 24 October 2026).
+**Basis:** Reconciles `SNAKE_ESCAPE_PRODUCTION_PLAN.md` (target specification), `PROJECT_HANDOFF_FOR_AI.md` (repository inventory), and the user's direction recorded October 26, 2026.
 
 **Project:** Snake Escape, 2D portrait mobile puzzle game  
 **Engine:** Existing Unity editor version `6000.6.1f1` (confirm installed editor and project compatibility before changing versions)  
@@ -14,20 +14,20 @@
 
 ## 1. Final decision and guiding rule
 
-**Keep `Assets/snake chain game.unity` as the product baseline. Integrate and verify improvements in that scene one behavior at a time. Do not replace it with the separately generated modular prototype scene, regenerate the original scene, or perform a wholesale rewrite.**
+**Keep `Assets/snake chain game.unity`, its legacy systems, and its procedural level generator as the product baseline. Prefer reusing, fixing, and cleaning up those systems over building a parallel implementation. Improve and verify one behavior at a time. Do not replace the original with the modular prototype, regenerate the original scene, or perform a wholesale rewrite.**
 
 The repository has two distinct implementations:
 
 1. **Legacy/product implementation:** `Assets/snake chain game.unity`, `Assets/Legacy/GameManager.cs`, `Assets/Legacy/SnakeController.cs`, existing artwork and serialized UI.
 2. **Modular implementation/prototype:** `Assets/Game/`, including domain rules, solver, application services, presentation components, tests, and a separate gameplay scene.
 
-The modular code is reusable material, not proof that those systems power the current product. Before integrating any module, compare its coordinate, path, collision, and state-transition assumptions with the original level format and gameplay behavior.
+The modular code is optional reusable material, not proof that those systems power the current product or a reason to duplicate existing functionality. Use it only when a concrete need is identified; compare its coordinate, path, collision, and state-transition assumptions with the original level format and gameplay behavior, and discuss significant architecture changes first.
 
 ### Non-negotiable safety rules
 
 - Inspect `git status`, diffs, relevant scripts, scenes, prefabs, serialized references, and project settings before edits.
 - Preserve existing user work and original scene/UI. Never overwrite or delete code merely to make the architecture look cleaner.
-- Make one small, reviewable change at a time. State the behavior, expected files, and acceptance checks before each milestone.
+- Prefer extending the existing legacy generator and systems. Make one small, reviewable change at a time. State the behavior, expected files, and acceptance checks before each milestone.
 - Keep gameplay rules independent of Unity rendering and animation where practical.
 - Never claim a build, test, scene playtest, device test, or store-readiness check passed unless it was actually run.
 - If Unity Editor execution is unavailable, label results as static inspection or C# compilation only.
@@ -172,30 +172,28 @@ Complete these phases in order. Each phase ends with a report of files changed, 
 
 **Gate:** The original game survives repeated moves, blocked taps, restart during movement, pause/resume, repeated completion, and app relaunch without softlocks or unexpected progress loss.
 
-### Phase 5 — Resolve level pipeline; build validation and solver workflow
+### Phase 5 — Maintain and improve existing level generation
 
 **Tasks**
-- Choose one canonical level asset location/loading mechanism and resolve the generator/`LevelService` mismatch.
-- Add stable level IDs, board dimensions, snake paths, difficulty/learning metadata, content version, and validation status as appropriate.
-- Implement level geometry checks, boundary/path continuity checks, self- and inter-snake overlap checks, escape-route checks, and solution replay.
-- Run deterministic solver and batch validation against all authored levels. Save actionable reports with level ID and precise errors.
-- Ensure search-limit results are never mislabeled as proof of unsolvability.
-- Add a simple reliable authoring workflow first; then implement the visual Unity Editor path-drawing/preview tool, duplication, solver preview, and report export.
+- Keep the existing legacy procedural level generator as the product source of levels.
+- When level generation is in scope, inspect existing generation, progression, and edge cases before proposing changes.
+- Fix demonstrated generator bugs or clean up existing code without changing established behavior unintentionally.
+- Add targeted tests or deterministic checks for changes to the existing generator and verify generated levels in the original scene.
+- Consider authored assets, a solver pipeline, or editor-authoring tools only if a specific limitation in the existing approach is established and the user agrees with that direction.
 
-**Gate:** An authored level loads in the player build, invalid levels produce useful errors, solver results are reproducible, and a level can be validated and replayed from a fresh state.
+**Gate:** Existing levels remain correctly generated and playable through the original game's progression, and any generator changes are covered by relevant checks and verified in context.
 
-**Current status:** The generator and `LevelService` now share `Assets/Resources/Levels/`; three serialized sample levels pass geometry, solver, and Editor Resources-loading checks in the 72/72 EditMode suite. Built-player loading and integration with the modular controller remain open.
+**Current status:** The existing product continues using its legacy procedural generator. Three levels in `Assets/Resources/Levels/` belong to a separate modular prototype experiment and passed Editor geometry/solver/resource-loading checks in the 72/72 EditMode suite. Per the user's direction, built-player validation and product integration of this optional pipeline are deferred.
 
-### Phase 6 — Campaign production and progression
+### Phase 6 — Campaign quality and progression
 
 **Tasks**
-- Produce the target initial campaign of 30 levels only after the pipeline is reliable.
-- Suggested progression: 1–5 basic interaction; 6–10 one blocker; 11–15 dependency chains; 16–20 longer snakes/denser layouts; 21–25 longer reasoning sequences; 26–30 advanced combinations.
-- Measure difficulty using more than snake count: initial blocked count, shortest solution length, solution alternatives, dependency depth, density, plausible wrong moves, and playtest completion time.
-- Validate every level, replay its solution, inspect its visual readability, and manually playtest it.
-- Wire level selection and progression to the existing product UI rather than substituting the prototype HUD without approval.
+- Assess the current procedural level progression and player experience in the existing game before setting a separate authored-campaign target.
+- Improve the legacy generator and progression if testing identifies concrete quality, variety, difficulty, or reliability issues.
+- Preserve the existing product UI and saved progress while testing changes.
+- Consider hand-authored campaigns or level-selection UI only when there's a demonstrated requirement and an agreed design.
 
-**Gate:** All published levels are valid, solvable, visually readable, replayable from a fresh state, and playable from beginning to end. No campaign level is marked verified solely because it was generated.
+**Gate:** The existing progression produces playable, understandable levels and retains reliable progress; any broader campaign change is justified and tested before adoption.
 
 ### Phase 7 — UX, art, audio, accessibility
 

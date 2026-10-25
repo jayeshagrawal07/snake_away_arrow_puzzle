@@ -17,6 +17,8 @@ There are **two separate gameplay implementations** in this repository:
 
 The newer implementation has not replaced or been integrated into the original scene. Treat the original scene and its user-facing UI as the product to preserve. Reuse newer code selectively where it fits; do not assume that a feature in the prototype is available in the original game.
 
+**User direction (October 26, 2026):** Continue with the existing legacy game and its procedural level generator as the product path. Prefer reusing, fixing, and cleaning up existing systems over building parallel replacements. Do not integrate the modular authored-level pipeline into the product or spend further work validating it as a release path unless a concrete need is identified and discussed first.
+
 ## Current build and entry scene
 
 `ProjectSettings/EditorBuildSettings.asset` enables:
@@ -43,7 +45,7 @@ Assets/
       Domain/                     Grid, snake/level definitions, occupancy, rules, solver
       Application/                Session, move, undo, level, progression services
       Presentation/               Modular board, snake, input, controller, HUD views
-    Data/Levels/                  Level data location; no authored .asset campaign levels found
+    Resources/Levels/              Three sample assets for the separate modular prototype pipeline
     Prefabs/                      Snake/UI folders; no authored prefab files found
     Audio/                        Music/SFX folders; no audio files found
   Tests/EditMode/
@@ -142,7 +144,7 @@ The original scene's baseline was manually checked by the user and reported as w
 - Unity menu command to generate three solver-checked sample level assets
 - This is not the planned visual path-drawing level editor.
 
-The newer `GameController` currently uses `LongSpineMazeGenerator` directly. The canonical authored-level path is `Assets/Resources/Levels/`; the sample editor generator and `LevelService` share this path. Three sample assets are present and their serialized snake geometry, structural validity, solver results, and Resources loading passed the Unity EditMode suite (72/72). Built-player loading remains to be checked.
+The existing game uses the procedural level generator in `Assets/Legacy/GameManager.cs`; the user confirmed it is the preferred product path. Keep improving that generator and the surrounding legacy game when needed. `Assets/Resources/Levels/` contains three sample assets for the separate modular prototype pipeline; their Editor loading, geometry, and solver checks passed in the 72/72 EditMode suite. These samples are not connected to the original game. A built-player check for this optional modular pipeline is deferred unless a concrete need is identified.
 
 ## Tests and validation evidence
 
@@ -170,7 +172,7 @@ The latest run passed 72/72 tests. This does **not** confirm that either scene w
 - The modular implementation remains separate from the existing game; its systems must not be described as already powering the existing scene. Its unused prototype scene was removed during cleanup and can be regenerated from the Editor menu when needed.
 - The legacy `GameManager`/`SnakeController` path has no known integration with the modular `GameSession` or `PuzzleRules`.
 - Three sample campaign `.asset` files are generated under `Assets/Resources/Levels`; the modular `GameController` still generates puzzles procedurally.
-- The authored-level path is shared, but loading is not yet integrated into the modular controller or the existing product scene.
+- The authored-level path is shared by the modular sample generator and loader, but is not integrated into the modular controller or the existing product scene; this is not the current product direction.
 - The modular HUD exposes some button events (including pause/settings/hint/guide-related UI), but not all are wired by the modular controller.
 - The modular `ProgressionService` exists, but is not used by the current modular `GameController` level loop.
 - `README.md` and `PROGRESS.md` previously described the modular prototype as completed work for the product. They have been corrected to distinguish the inventory from existing-scene integration; continue to keep status claims evidence-based.
@@ -180,11 +182,12 @@ The latest run passed 72/72 tests. This does **not** confirm that either scene w
 ## Current migration direction
 
 1. Preserve `Assets/snake chain game.unity` and its existing presentation.
-2. Map its current UI actions and gameplay lifecycle before changing runtime behavior.
-3. Improve one behavior at a time in the original scene, retaining existing input and visuals where possible.
-4. Verify normal moves, blocked moves, undo, restart, and completion in the original scene after relevant changes.
-5. Reuse the modular domain logic only when its coordinate/path rules are compatible with legacy level data.
-6. Remove or replace legacy responsibilities only after the integrated behavior has parity and has been verified.
+2. Prefer the existing legacy level generator, gameplay flow, UI, and save/progression systems; fix or refactor them incrementally instead of creating parallel replacements.
+3. Map the current UI actions and gameplay lifecycle before changing runtime behavior.
+4. Improve one behavior at a time in the original scene, retaining existing input and visuals where possible.
+5. Verify normal moves, blocked moves, undo, restart, level generation/progression, and completion in the original scene after relevant changes.
+6. Reuse modular code only where it solves a demonstrated need and is compatible with legacy level data and behavior.
+7. Remove or replace legacy responsibilities only after the integrated behavior has parity and has been verified.
 
 Do not regenerate the original scene, replace its UI with the prototype HUD, migrate every subsystem in one pass, or delete legacy code as a cleanup shortcut.
 
@@ -199,3 +202,4 @@ Before editing:
 5. Add or update a focused test where feasible, then report exactly which tests/builds were actually run.
 6. Do not claim PlayMode or device validation unless performed.
 7. Ask before making a significant design or migration decision.
+8. Prefer extending or repairing existing project systems; do not start a parallel system merely because it is cleaner in isolation.

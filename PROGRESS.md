@@ -14,18 +14,20 @@ The former overall-completion percentage and milestone checkmarks have been remo
 | Area | Current evidence-based status |
 |:---|:---|
 | Existing game | Scene and legacy gameplay scripts are present; preserve them as the baseline. |
-| New puzzle engine | Domain, application, and presentation code exists separately; migrate selectively where it improves the existing game. |
+| New puzzle engine | Domain, application, and presentation code exists separately; use only when it addresses a demonstrated need in the existing game. |
 | Existing-scene integration | Not complete. The original scene still uses the legacy scripts. |
 | Build launch scene | Configured to `Assets/snake chain game.unity`. |
 | Campaign, authoring, release readiness | Not verified as complete; modular level data remains separate from the original game. |
 
+**Architectural decision (October 26, 2026):** Continue using the legacy game and its existing procedural level generator. Reuse and incrementally improve existing code before considering a parallel replacement. The modular authored-level samples are a separate prototype experiment, not the next product integration task. Defer their player-build validation unless a concrete need arises and is discussed.
+
 ## Migration Plan
 
-1. **Preserve and baseline** — Keep the existing scene and UI, identify the current gameplay flows, and establish what must continue working.
-2. **Integrate one behavior at a time** — Start with snake selection/move validation and the already-reported undo behavior. Keep existing visuals and input where possible; route rules through the reusable domain logic only where compatible.
-3. **Verify each integration** — Test normal moves, blocked moves, undo (including a snake restored to a cell another route crosses), restart, and level completion in the existing scene.
-4. **Continue by subsystem** — Migrate progression/save behavior and other responsibilities only after the move flow is stable.
-5. **Clean up after parity** — Remove duplicate or obsolete code only after the existing scene uses the replacement and its behavior is verified.
+1. **Preserve and baseline** — Keep the existing scene, UI, procedural level generator, and gameplay flows; establish what must continue working.
+2. **Improve the existing implementation** — Reuse and incrementally fix or clean up the legacy systems. Avoid parallel replacements unless a concrete limitation requires one.
+3. **Verify each change** — Test normal moves, blocked moves, undo (including a snake restored to a cell another route crosses), restart, level generation/progression, and completion in the existing scene.
+4. **Extract or replace only when justified** — Use modular code only when it provides a needed improvement and its behavior is verified against the existing game.
+5. **Clean up after parity** — Remove duplicate or obsolete code only after its replacement is integrated and verified.
 
 No whole-scene rewrite or broad cleanup is planned.
 
@@ -148,7 +150,8 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Add Editor resource-loading coverage plus campaign sorting and ID-lookup tests.
 - [x] Fix `GridCoord` serialization so generated level assets retain snake-body coordinates; regenerate the three sample levels in `Assets/Resources/Levels/`.
 - [x] Validate every authored sample level’s saved geometry and solver result in Unity EditMode; full suite passed 72/72.
-- [ ] Verify that the same authored level loads in a built player; the current resource test covers Editor loading only.
+- [ ] When level generation is next in scope, review the existing legacy procedural generator and make only evidence-driven fixes or cleanup; preserve its current behavior otherwise.
+- [ ] Built-player validation of the separate modular authored-level pipeline is deferred; revisit only if that pipeline is selected for a concrete product need.
 - [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
 - [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
 - [x] Unity batch-mode EditMode run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped), including blocker-count, legacy parity, and valid/blocked result payload tests.
