@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace SnakeEscape.Domain
 {
@@ -8,15 +9,18 @@ namespace SnakeEscape.Domain
     /// Column increases rightward; Row increases upward.
     /// </summary>
     [Serializable]
-    public readonly struct GridCoord : IEquatable<GridCoord>
+    public struct GridCoord : IEquatable<GridCoord>
     {
-        public readonly int Col;
-        public readonly int Row;
+        [SerializeField] private int col;
+        [SerializeField] private int row;
+
+        public int Col => col;
+        public int Row => row;
 
         public GridCoord(int col, int row)
         {
-            Col = col;
-            Row = row;
+            this.col = col;
+            this.row = row;
         }
 
         // --- Cardinal constants ---

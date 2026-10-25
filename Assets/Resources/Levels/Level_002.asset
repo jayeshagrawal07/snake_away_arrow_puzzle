@@ -1,0 +1,63 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65bf90acef9a23647864bcd35b3da12a, type: 3}
+  m_Name: Level_002
+  m_EditorClassIdentifier: SnakeEscape.Domain::SnakeEscape.Domain.LevelDefinition
+  LevelId: Level_002
+  CampaignChapter: Chapter 1
+  SortOrder: 2
+  Cols: 8
+  Rows: 8
+  Snakes:
+  - Id: snake_A
+    BodyColor: {r: 0.18, g: 0.72, b: 0.44, a: 1}
+    BodyCells:
+    - col: 1
+      row: 4
+    - col: 1
+      row: 3
+    - col: 1
+      row: 2
+    ExitDirection:
+      col: 1
+      row: 0
+  - Id: snake_B
+    BodyColor: {r: 0.2, g: 0.5, b: 0.95, a: 1}
+    BodyCells:
+    - col: 3
+      row: 4
+    - col: 3
+      row: 3
+    - col: 3
+      row: 2
+    ExitDirection:
+      col: 0
+      row: 1
+  - Id: snake_C
+    BodyColor: {r: 0.95, g: 0.45, b: 0.2, a: 1}
+    BodyCells:
+    - col: 3
+      row: 6
+    - col: 2
+      row: 6
+    - col: 1
+      row: 6
+    ExitDirection:
+      col: 1
+      row: 0
+  DifficultyCategory: Easy
+  LearningObjective: '3-snake dependency chain: C clears B, B clears A.'
+  DesignerNotes: 
+  Author: 
+  ContentVersion: 1.0
+  ValidationPassed: 1
+  ValidationReport: 'Solved in 3 move(s). States explored: 3.'

@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65bf90acef9a23647864bcd35b3da12a, type: 3}
+  m_Name: Level_001
+  m_EditorClassIdentifier: SnakeEscape.Domain::SnakeEscape.Domain.LevelDefinition
+  LevelId: Level_001
+  CampaignChapter: Chapter 1
+  SortOrder: 1
+  Cols: 8
+  Rows: 8
+  Snakes:
+  - Id: snake_A
+    BodyColor: {r: 0.18, g: 0.72, b: 0.44, a: 1}
+    BodyCells:
+    - col: 2
+      row: 3
+    - col: 2
+      row: 2
+    - col: 2
+      row: 1
+    ExitDirection:
+      col: 1
+      row: 0
+  - Id: snake_B
+    BodyColor: {r: 0.2, g: 0.5, b: 0.95, a: 1}
+    BodyCells:
+    - col: 4
+      row: 3
+    - col: 4
+      row: 2
+    - col: 4
+      row: 1
+    ExitDirection:
+      col: 0
+      row: 1
+  DifficultyCategory: Tutorial
+  LearningObjective: Learn how to untangle a snake blocked by another snake's body.
+  DesignerNotes: 
+  Author: 
+  ContentVersion: 1.0
+  ValidationPassed: 1
+  ValidationReport: 'Solved in 2 move(s). States explored: 2.'

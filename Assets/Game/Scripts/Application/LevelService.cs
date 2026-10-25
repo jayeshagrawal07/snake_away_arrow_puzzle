@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using SnakeEscape.Domain;
 using UnityEngine;
@@ -9,12 +10,12 @@ namespace SnakeEscape.Application
     /// In the initial implementation, levels are loaded via Resources.Load.
     /// Later this can be swapped for Addressables.
     ///
-    /// Place level assets at: Assets/Game/Data/Levels/
+    /// Place level assets at: Assets/Resources/Levels/
     /// Load path:             "Levels/Level_XXX"
     /// </summary>
     public class LevelService
     {
-        private const string LevelsResourcePath = "Levels";
+        public const string LevelsResourcePath = "Levels";
 
         private List<LevelDefinition> _campaignLevels;
 
@@ -24,7 +25,14 @@ namespace SnakeEscape.Application
         /// </summary>
         public void LoadCampaign()
         {
-            var assets = Resources.LoadAll<LevelDefinition>(LevelsResourcePath);
+            LoadCampaign(Resources.LoadAll<LevelDefinition>(LevelsResourcePath));
+        }
+
+        public void LoadCampaign(IEnumerable<LevelDefinition> assets)
+        {
+            if (assets == null)
+                throw new ArgumentNullException(nameof(assets));
+
             _campaignLevels = new List<LevelDefinition>(assets);
             _campaignLevels.Sort((a, b) => a.SortOrder.CompareTo(b.SortOrder));
             Debug.Log($"[LevelService] Loaded {_campaignLevels.Count} level(s) from Resources/{LevelsResourcePath}/");

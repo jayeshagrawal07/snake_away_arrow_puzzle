@@ -47,13 +47,13 @@ The modular code is reusable material, not proof that those systems power the cu
 - Modular application code includes session, move, undo, level, and progression services.
 - Modular presentation code includes a separate controller, board and snake views, input, HUD, and completion UI.
 - EditMode test source files exist for grid coordinates, occupancy, puzzle rules, solver, campaign validation, and application behavior.
-- A `.csproj` build was reported to compile successfully. This is compilation evidence only—not proof Unity Test Runner tests executed or either scene was play-tested.
+- The Unity EditMode suite has passed 72/72 tests, including authored campaign geometry/solver validation. Neither scene has been play-tested as part of this validation.
 
 ### Known issues to resolve or explicitly track
 
 1. The legacy implementation is tightly coupled and has no known integration with modular `GameSession` / `PuzzleRules`.
-2. No authored campaign `.asset` levels were found under `Assets/Game/Data/Levels` at inspection time; the modular scene currently generates puzzles procedurally.
-3. The sample level generator writes under `Assets/Game/Data/Levels`, while `LevelService` expects levels under `Resources/Levels`.
+2. Three authored sample `.asset` levels are generated and validated; the modular controller still generates puzzles procedurally.
+3. The generator and `LevelService` now share `Assets/Resources/Levels/`; loading in a built player remains unverified.
 4. Some modular HUD events (including pause/settings/hint/guide-related actions) are not wired through the modular controller.
 5. Modular `ProgressionService` is not used by the modular controller's current level loop.
 6. The configured original scene must be tested directly; modular prototype behavior cannot be used as evidence for original-scene behavior.
@@ -110,7 +110,7 @@ Do not force a large refactor to achieve this diagram. Establish seams around in
 
 ### Level data and loading decision
 
-Choose and document **one** canonical source/location for authored level data. Resolve the current `Assets/Game/Data/Levels` versus `Resources/Levels` mismatch before making `LevelService` a production dependency. Do not duplicate assets to conceal the mismatch. The final approach must work in a player build, not only in the Unity Editor. Add a load test proving that the same authored level can be loaded in Editor and in a built player.
+**Decision:** Use `Assets/Resources/Levels/` as the canonical authored-level location. The editor generator writes there, and `LevelService` loads from `Resources/Levels`, so Unity includes these assets in player builds. Do not duplicate level assets to hide path mismatches. EditMode coverage verifies Editor loading; add and run a built-player check proving the same authored level loads there.
 
 ---
 
@@ -183,6 +183,8 @@ Complete these phases in order. Each phase ends with a report of files changed, 
 - Add a simple reliable authoring workflow first; then implement the visual Unity Editor path-drawing/preview tool, duplication, solver preview, and report export.
 
 **Gate:** An authored level loads in the player build, invalid levels produce useful errors, solver results are reproducible, and a level can be validated and replayed from a fresh state.
+
+**Current status:** The generator and `LevelService` now share `Assets/Resources/Levels/`; three serialized sample levels pass geometry, solver, and Editor Resources-loading checks in the 72/72 EditMode suite. Built-player loading and integration with the modular controller remain open.
 
 ### Phase 6 — Campaign production and progression
 
@@ -310,7 +312,7 @@ The first save-hardening slice clamps negative saved level/resource/currency cou
 
 A full Unity batch-mode EditMode run after these changes compiled the project and passed all 68 tests (0 failed, 0 skipped). Two earlier test failures were resolved by correcting the undo fixture's missing snapshot and updating a stale two-snake sample-level expectation to validate the current generated level deterministically. The earlier focused 27/27 `PuzzleRulesTests` run predates this save change.
 
-**Next:** Validate save migration, invalid-snapshot fallback, and app relaunch in the original scene's Play mode. The user has asked us to assume general clear/blocked/concurrent gameplay is working, so this work need not block on those broader checks; record the assumption separately from test evidence.
+**Next:** Validate authored campaign levels with the solver and level validator, then confirm the Resources asset loads in a built player. The user confirmed original-scene save persistence works after Play-mode relaunch. Authored-level loading remains modular and is not integrated into the original product scene.
 
 Preserve all existing worktree changes.
 

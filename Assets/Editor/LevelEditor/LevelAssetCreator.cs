@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using SnakeEscape.Application;
 using SnakeEscape.Domain;
 using SnakeEscape.Presentation;
 using UnityEditor;
@@ -10,7 +11,7 @@ namespace SnakeEscape.Editor
 {
     public static class LevelAssetCreator
     {
-        private const string LevelsFolder = "Assets/Game/Data/Levels";
+        private const string LevelsFolder = "Assets/Resources/" + LevelService.LevelsResourcePath;
         private const string ScenePath = "Assets/Game/Scenes/Gameplay.unity";
 
         [MenuItem("Tools/Snake Escape/Setup Gameplay Scene")]
@@ -50,6 +51,10 @@ namespace SnakeEscape.Editor
                 Directory.CreateDirectory(LevelsFolder);
             }
 
+            AssetDatabase.DeleteAsset($"{LevelsFolder}/Level_001.asset");
+            AssetDatabase.DeleteAsset($"{LevelsFolder}/Level_002.asset");
+            AssetDatabase.DeleteAsset($"{LevelsFolder}/Level_003.asset");
+
             CreateLevel1();
             CreateLevel2();
             CreateLevel3();
@@ -57,7 +62,7 @@ namespace SnakeEscape.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Debug.Log("[LevelAssetCreator] Sample levels 1-3 created under " + LevelsFolder);
+            Debug.Log("[LevelAssetCreator] Sample levels 1-3 created under " + LevelsFolder + " and can be loaded from Resources/Levels.");
         }
 
         private static void CreateLevel1()
@@ -224,4 +229,3 @@ namespace SnakeEscape.Editor
         }
     }
 }
-

@@ -1,5 +1,6 @@
 using System.Linq;
 using NUnit.Framework;
+using SnakeEscape.Application;
 using SnakeEscape.Domain;
 
 namespace SnakeEscape.Tests
@@ -28,6 +29,32 @@ namespace SnakeEscape.Tests
                 var result = solver.Solve(level);
                 Assert.IsTrue(result.IsSolved, $"Level {i + 1} ({level.LevelId}) is unsolvable: {result.Message}");
                 Assert.Greater(result.SolutionSequence.Count, 0);
+            }
+        }
+
+        [Test]
+        public void AuthoredCampaign_AllResourcesHaveValidGeometry_AndAreSolvable()
+        {
+            var service = new LevelService();
+            service.LoadCampaign();
+
+            Assert.GreaterOrEqual(service.LevelCount, 3);
+            var solver = new PuzzleSolver();
+
+            foreach (LevelDefinition level in service.AllLevels)
+            {
+                Assert.IsTrue(level.ValidationPassed, $"Level {level.LevelId} was not marked as validated.");
+                Assert.IsNotEmpty(level.Snakes, $"Level {level.LevelId} has no snakes.");
+
+                foreach (SnakeDefinition snake in level.Snakes)
+                    Assert.IsNotEmpty(snake.BodyCells, $"Snake {snake.Id} in {level.LevelId} has no body cells.");
+
+                var errors = PuzzleRules.ValidateLevel(level);
+                Assert.AreEqual(0, errors.Count, $"Level {level.LevelId} validation failed: " + string.Join(", ", errors));
+
+                var result = solver.Solve(level);
+                Assert.IsTrue(result.IsSolved, $"Level {level.LevelId} is unsolvable: {result.Message}");
+                Assert.AreEqual(level.Snakes.Count, result.SolutionSequence.Count);
             }
         }
 

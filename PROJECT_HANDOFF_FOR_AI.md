@@ -142,7 +142,7 @@ The original scene's baseline was manually checked by the user and reported as w
 - Unity menu command to generate three solver-checked sample level assets
 - This is not the planned visual path-drawing level editor.
 
-The newer `GameController` currently uses `LongSpineMazeGenerator` directly. The `LevelService` expects levels under `Resources/Levels`, whereas the sample editor generator writes to `Assets/Game/Data/Levels`. Resolve this mismatch before relying on generated assets through `LevelService`.
+The newer `GameController` currently uses `LongSpineMazeGenerator` directly. The canonical authored-level path is `Assets/Resources/Levels/`; the sample editor generator and `LevelService` share this path. Three sample assets are present and their serialized snake geometry, structural validity, solver results, and Resources loading passed the Unity EditMode suite (72/72). Built-player loading remains to be checked.
 
 ## Tests and validation evidence
 
@@ -154,21 +154,23 @@ EditMode test source files are under `Assets/Tests/EditMode/`:
 - `PuzzleSolverTests`
 - `CampaignValidationTests`
 - `ApplicationTests`
+- `PlayerSaveServiceTests`
+- `LevelServiceTests` and `LevelServiceResourceTests`
 
-The test project compiled successfully with:
+The Unity EditMode suite ran successfully with:
 
 ```powershell
-dotnet build SnakeEscape.Tests.EditMode.csproj --verbosity minimal
+Unity.exe -batchmode -nographics -projectPath "<project>" -runTests -testPlatform EditMode
 ```
 
-That confirms compilation only. It does **not** confirm the Unity Test Runner executed the tests or that either scene was play-tested. Run the Unity EditMode suite and manually test the original scene before claiming runtime verification.
+The latest run passed 72/72 tests. This does **not** confirm that either scene was play-tested or that authored levels load in a built player.
 
 ## Known gaps and cautions
 
 - The modular implementation remains separate from the existing game; its systems must not be described as already powering the existing scene. Its unused prototype scene was removed during cleanup and can be regenerated from the Editor menu when needed.
 - The legacy `GameManager`/`SnakeController` path has no known integration with the modular `GameSession` or `PuzzleRules`.
-- No authored campaign `.asset` files were found in `Assets/Game/Data/Levels`; the modular `GameController` generates puzzles procedurally.
-- The sample-level generator and `LevelService` use different asset locations.
+- Three sample campaign `.asset` files are generated under `Assets/Resources/Levels`; the modular `GameController` still generates puzzles procedurally.
+- The authored-level path is shared, but loading is not yet integrated into the modular controller or the existing product scene.
 - The modular HUD exposes some button events (including pause/settings/hint/guide-related UI), but not all are wired by the modular controller.
 - The modular `ProgressionService` exists, but is not used by the current modular `GameController` level loop.
 - `README.md` and `PROGRESS.md` previously described the modular prototype as completed work for the product. They have been corrected to distinguish the inventory from existing-scene integration; continue to keep status claims evidence-based.

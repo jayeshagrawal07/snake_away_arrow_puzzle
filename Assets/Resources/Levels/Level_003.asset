@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 65bf90acef9a23647864bcd35b3da12a, type: 3}
+  m_Name: Level_003
+  m_EditorClassIdentifier: SnakeEscape.Domain::SnakeEscape.Domain.LevelDefinition
+  LevelId: Level_003
+  CampaignChapter: Chapter 1
+  SortOrder: 3
+  Cols: 8
+  Rows: 8
+  Snakes:
+  - Id: snake_1
+    BodyColor: {r: 0.6, g: 0.25, b: 0.85, a: 1}
+    BodyCells:
+    - col: 2
+      row: 5
+    - col: 2
+      row: 4
+    - col: 3
+      row: 4
+    - col: 4
+      row: 4
+    ExitDirection:
+      col: 0
+      row: 1
+  - Id: snake_2
+    BodyColor: {r: 0.15, g: 0.75, b: 0.75, a: 1}
+    BodyCells:
+    - col: 2
+      row: 6
+    - col: 1
+      row: 6
+    - col: 0
+      row: 6
+    ExitDirection:
+      col: 1
+      row: 0
+  DifficultyCategory: Easy
+  LearningObjective: Curved snakes with multiple turns.
+  DesignerNotes: 
+  Author: 
+  ContentVersion: 1.0
+  ValidationPassed: 1
+  ValidationReport: 'Solved in 2 move(s). States explored: 2.'

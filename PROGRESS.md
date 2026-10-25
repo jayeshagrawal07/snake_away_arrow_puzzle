@@ -17,7 +17,7 @@ The former overall-completion percentage and milestone checkmarks have been remo
 | New puzzle engine | Domain, application, and presentation code exists separately; migrate selectively where it improves the existing game. |
 | Existing-scene integration | Not complete. The original scene still uses the legacy scripts. |
 | Build launch scene | Configured to `Assets/snake chain game.unity`. |
-| Campaign, authoring, release readiness | Not verified as complete; assess after the existing gameplay migration. |
+| Campaign, authoring, release readiness | Not verified as complete; modular level data remains separate from the original game. |
 
 ## Migration Plan
 
@@ -143,7 +143,12 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Add schema-v1 `PlayerSaveService` with a checksummed JSON snapshot, legacy-key mirrors, migration fallback, and an explicit reset path.
 - [x] Preserve legacy progress when `SnakePuzzle_FreshStart_V8` is missing but existing progress keys are present; use defaults only when no legacy save fields exist.
 - [x] Add and run PlayerSaveService EditMode tests for first-run defaults, legacy migration, negative-value normalization, `int.MaxValue` coins, corrupt snapshot fallback, and explicit reset (6/6 passed).
-- [ ] Validate save migration, invalid-snapshot fallback, and app relaunch in the original scene's Play mode.
+- [x] User confirmed original-scene save persistence works after Play-mode relaunch.
+- [x] Choose `Assets/Resources/Levels/` as the canonical authored-level folder; sample generation and runtime loading now share this Resources path.
+- [x] Add Editor resource-loading coverage plus campaign sorting and ID-lookup tests.
+- [x] Fix `GridCoord` serialization so generated level assets retain snake-body coordinates; regenerate the three sample levels in `Assets/Resources/Levels/`.
+- [x] Validate every authored sample level’s saved geometry and solver result in Unity EditMode; full suite passed 72/72.
+- [ ] Verify that the same authored level loads in a built player; the current resource test covers Editor loading only.
 - [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
 - [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
 - [x] Unity batch-mode EditMode run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped), including blocker-count, legacy parity, and valid/blocked result payload tests.
