@@ -5,6 +5,7 @@ using TMPro;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using SnakeEscape.Domain;
+using SnakeEscape.Application;
 
 public class GameManager : MonoBehaviour
 {
@@ -52,6 +53,7 @@ public class GameManager : MonoBehaviour
     private int challengeRunCount = 0;
     private int levelGeneration = 0;
     private bool isCurrentChallengeUnlocked = false;
+    private PlayerSaveService playerSaveService;
 
     // Milestone & Timer State (3 Minutes = 180s)
     private int initialSnakeCountInLevel = 0;
@@ -168,25 +170,16 @@ public class GameManager : MonoBehaviour
         AutoLoadCustomSpritesFromAssets();
 #endif
 
-        if (resetToLevel1Now || PlayerPrefs.GetInt("SnakePuzzle_FreshStart_V8", 0) == 0)
-        {
-            PlayerPrefs.SetInt("SnakePuzzle_Level", 1);
-            PlayerPrefs.SetInt("SnakePuzzle_Hints", 1);
-            PlayerPrefs.SetInt("SnakePuzzle_Grids", 1);
-            PlayerPrefs.SetInt("SnakePuzzle_Coins", 760);
-            PlayerPrefs.SetInt("SnakePuzzle_ChallengeUnlocked", 0);
-            PlayerPrefs.SetInt("SnakePuzzle_FreshStart_V8", 1);
-            PlayerPrefs.Save();
-            resetToLevel1Now = false;
-        }
-
-        currentLevel = Mathf.Max(1, PlayerPrefs.GetInt("SnakePuzzle_Level", 1));
-        remainingHints = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Hints", 1));
-        remainingGridGuides = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Grids", 1));
-        playerCoins = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_Coins", 760));
-        challengeRunCount = Mathf.Max(0, PlayerPrefs.GetInt("SnakePuzzle_ChallengeRuns", 0));
-        isCurrentChallengeUnlocked = PlayerPrefs.GetInt("SnakePuzzle_ChallengeUnlocked", 0) == 1;
-        hapticsEnabled = PlayerPrefs.GetInt("SnakePuzzle_Haptics", 1) == 1;
+        playerSaveService = new PlayerSaveService(new UnityPlayerSaveStore());
+        PlayerSaveData savedProgress = playerSaveService.LoadOrMigrate(resetToLevel1Now);
+        resetToLevel1Now = false;
+        currentLevel = savedProgress.currentLevel;
+        remainingHints = savedProgress.hints;
+        remainingGridGuides = savedProgress.gridGuides;
+        playerCoins = savedProgress.coins;
+        challengeRunCount = savedProgress.challengeRunCount;
+        isCurrentChallengeUnlocked = savedProgress.challengeUnlocked;
+        hapticsEnabled = savedProgress.hapticsEnabled;
     }
 
     void Start()
@@ -198,20 +191,27 @@ public class GameManager : MonoBehaviour
 
     void SaveProgress()
     {
+        SaveProgress(currentLevel);
+    }
+
+    void SaveProgress(int levelToSave)
+    {
         currentLevel = Mathf.Max(1, currentLevel);
         remainingHints = Mathf.Max(0, remainingHints);
         remainingGridGuides = Mathf.Max(0, remainingGridGuides);
         playerCoins = Mathf.Max(0, playerCoins);
         challengeRunCount = Mathf.Max(0, challengeRunCount);
 
-        PlayerPrefs.SetInt("SnakePuzzle_Level", currentLevel);
-        PlayerPrefs.SetInt("SnakePuzzle_Hints", remainingHints);
-        PlayerPrefs.SetInt("SnakePuzzle_Grids", remainingGridGuides);
-        PlayerPrefs.SetInt("SnakePuzzle_Coins", playerCoins);
-        PlayerPrefs.SetInt("SnakePuzzle_ChallengeRuns", challengeRunCount);
-        PlayerPrefs.SetInt("SnakePuzzle_ChallengeUnlocked", isCurrentChallengeUnlocked ? 1 : 0);
-        PlayerPrefs.SetInt("SnakePuzzle_Haptics", hapticsEnabled ? 1 : 0);
-        PlayerPrefs.Save();
+        playerSaveService.Save(new PlayerSaveData
+        {
+            currentLevel = Mathf.Max(1, levelToSave),
+            hints = remainingHints,
+            gridGuides = remainingGridGuides,
+            coins = playerCoins,
+            challengeRunCount = challengeRunCount,
+            challengeUnlocked = isCurrentChallengeUnlocked,
+            hapticsEnabled = hapticsEnabled
+        });
     }
 
     // Point 3: Tactile Haptic Feedback
@@ -2678,8 +2678,7 @@ public class GameManager : MonoBehaviour
             }
             else
             {
-                PlayerPrefs.SetInt("SnakePuzzle_Level", currentLevel + 1);
-                PlayerPrefs.Save();
+                SaveProgress(currentLevel + 1);
             }
 
             StartCoroutine(Celebrate3SecondsAndShowWinScreen(heartCount, coinsEarned, levelGeneration));

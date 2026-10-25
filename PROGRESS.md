@@ -140,6 +140,10 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] User confirmed the delayed-game-over/restart and restart-during-simulated-ad flows work in Play mode.
 - [x] Clamp negative saved level/resource/currency counters during load and save; saturate coin rewards instead of allowing integer overflow.
 - [x] Build `Assembly-CSharp` and `SnakeEscape.Tests.EditMode` after the save-value hardening (0 warnings/errors).
+- [x] Add schema-v1 `PlayerSaveService` with a checksummed JSON snapshot, legacy-key mirrors, migration fallback, and an explicit reset path.
+- [x] Preserve legacy progress when `SnakePuzzle_FreshStart_V8` is missing but existing progress keys are present; use defaults only when no legacy save fields exist.
+- [x] Add and run PlayerSaveService EditMode tests for first-run defaults, legacy migration, negative-value normalization, `int.MaxValue` coins, corrupt snapshot fallback, and explicit reset (6/6 passed).
+- [ ] Validate save migration, invalid-snapshot fallback, and app relaunch in the original scene's Play mode.
 - [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
 - [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
 - [x] Unity batch-mode EditMode run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped), including blocker-count, legacy parity, and valid/blocked result payload tests.
@@ -148,10 +152,10 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Run blocker-count, parity-fixture, and result-payload tests in Unity batch-mode Test Runner.
 - [x] Build the delayed-game-over guard and EditMode test assembly (both builds completed with 0 warnings/errors).
 - [x] Unity batch-mode EditMode regression run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped).
-- [x] Run the full Unity batch-mode EditMode suite after save hardening and cleanup; Unity compiled the project and ran 62 tests (60 passed, 2 failed).
+- [x] Run the full Unity batch-mode EditMode suite after save-service changes; Unity compiled the project and ran 68 tests (66 passed, 2 failed).
 - [ ] Investigate `GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`; these failures are outside the file cleanup and were not changed here.
-- [ ] Manually test negative/corrupt stored resource values and coin totals near `int.MaxValue`.
-- [ ] Continue save/progression audit: add a versioned schema and explicit recovery policy before changing any existing keys.
+- [ ] Manually test save migration, invalid snapshot fallback, and app relaunch in the original scene.
+- [ ] Investigate the two failures from the previous full Unity EditMode run (`GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`); causes remain unknown.
 - [x] User confirmed the restart/celebration, game-over/restart, and restart-during-simulated-ad lifecycle checks are working in Play mode.
 - [x] Record source/build/EditMode-test evidence and the remaining PlayMode limitation before continuing lifecycle work.
 
