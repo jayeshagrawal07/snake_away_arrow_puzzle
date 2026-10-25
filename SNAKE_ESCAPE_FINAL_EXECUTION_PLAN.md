@@ -308,9 +308,9 @@ The pause/in-flight-effects audit also found that simulated-ad coroutines use un
 
 The first save-hardening slice clamps negative saved level/resource/currency counters and saturates coin rewards at `int.MaxValue`. `PlayerSaveService` adds a checksummed schema-v1 JSON snapshot while retaining the existing `SnakePuzzle_*` keys as mirrors. It migrates valid legacy values when the snapshot is missing or invalid, preserves legacy values if the fresh-start marker is absent, and only initializes defaults when no legacy progress fields exist (unless the explicit reset flag is set). All 6 focused save-service EditMode tests passed. Original-scene PlayMode persistence/relaunch checks remain pending.
 
-A full Unity batch-mode EditMode run after these changes compiled the project and ran 68 tests: 66 passed and 2 failed (`GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`). Their causes remain to be investigated; the earlier 27/27 focused `PuzzleRulesTests` run predates this save change.
+A full Unity batch-mode EditMode run after these changes compiled the project and passed all 68 tests (0 failed, 0 skipped). Two earlier test failures were resolved by correcting the undo fixture's missing snapshot and updating a stale two-snake sample-level expectation to validate the current generated level deterministically. The earlier focused 27/27 `PuzzleRulesTests` run predates this save change.
 
-**Next:** Run the focused PlayerSaveService tests with the Editor closed, then validate original-scene load/save/relaunch behavior in Play mode. Investigate the two known modular EditMode failures separately. The user has asked us to assume general clear/blocked/concurrent gameplay is working, so this work need not block on those broader checks; record the assumption separately from test evidence.
+**Next:** Validate save migration, invalid-snapshot fallback, and app relaunch in the original scene's Play mode. The user has asked us to assume general clear/blocked/concurrent gameplay is working, so this work need not block on those broader checks; record the assumption separately from test evidence.
 
 Preserve all existing worktree changes.
 

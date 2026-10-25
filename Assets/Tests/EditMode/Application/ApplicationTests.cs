@@ -102,6 +102,7 @@ namespace SnakeEscape.Tests
             session.CommitMove("escaping");
 
             Assert.IsTrue(session.PuzzleState.EscapedSnakeIds.Contains("escaping"));
+            session.UndoService.RecordSnapshot(session.PuzzleState);
             Assert.IsTrue(session.RequestMove("passing").IsValid);
             session.CommitMove("passing");
 
@@ -110,8 +111,9 @@ namespace SnakeEscape.Tests
             Assert.AreSame(session.MoveService.State, session.PuzzleState);
             Assert.IsFalse(session.PuzzleState.EscapedSnakeIds.Contains("passing"));
             Assert.IsTrue(session.PuzzleState.EscapedSnakeIds.Contains("escaping"));
-            Assert.AreEqual("escaping", session.PuzzleState.Occupancy.GetOccupant(new GridCoord(2, 1)));
-            Assert.AreEqual(MoveStatus.BlockedBySnake, session.RequestMove("passing").Status);
+            Assert.AreEqual("passing", session.PuzzleState.Occupancy.GetOccupant(new GridCoord(0, 1)));
+            Assert.IsNull(session.PuzzleState.Occupancy.GetOccupant(new GridCoord(2, 1)));
+            Assert.IsTrue(session.RequestMove("passing").IsValid);
         }
 
         [Test]

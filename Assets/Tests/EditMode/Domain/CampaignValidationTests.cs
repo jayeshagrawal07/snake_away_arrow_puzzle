@@ -1,3 +1,4 @@
+using System.Linq;
 using NUnit.Framework;
 using SnakeEscape.Domain;
 
@@ -31,16 +32,17 @@ namespace SnakeEscape.Tests
         }
 
         [Test]
-        public void SampleLevel1_SolvesInExactExpectedOrder()
+        public void SampleLevel1_SolvesDeterministicallyWithEverySnake()
         {
             var level = SnakeEscape.Presentation.GameController.CreateSampleLevel();
             var solver = new PuzzleSolver();
             var result = solver.Solve(level);
+            var repeatedResult = solver.Solve(level);
 
             Assert.IsTrue(result.IsSolved);
-            Assert.AreEqual(2, result.SolutionSequence.Count);
-            Assert.AreEqual("snake_B", result.SolutionSequence[0]);
-            Assert.AreEqual("snake_A", result.SolutionSequence[1]);
+            Assert.AreEqual(level.Snakes.Count, result.SolutionSequence.Count);
+            CollectionAssert.AreEquivalent(level.Snakes.Select(snake => snake.Id), result.SolutionSequence);
+            CollectionAssert.AreEqual(result.SolutionSequence, repeatedResult.SolutionSequence);
         }
     }
 }

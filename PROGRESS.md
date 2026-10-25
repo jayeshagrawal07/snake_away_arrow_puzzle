@@ -152,10 +152,10 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Run blocker-count, parity-fixture, and result-payload tests in Unity batch-mode Test Runner.
 - [x] Build the delayed-game-over guard and EditMode test assembly (both builds completed with 0 warnings/errors).
 - [x] Unity batch-mode EditMode regression run passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped).
-- [x] Run the full Unity batch-mode EditMode suite after save-service changes; Unity compiled the project and ran 68 tests (66 passed, 2 failed).
-- [ ] Investigate `GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`; these failures are outside the file cleanup and were not changed here.
+- [x] Correct the undo regression fixture to record the pre-move state for each move being undone; assert occupancy follows the escaped-snake invariant.
+- [x] Update the generated-level solver test to verify deterministic complete solution coverage rather than the obsolete two-snake tutorial order.
+- [x] Run the full Unity batch-mode EditMode suite after save-service and test updates; all 68 tests passed (0 failed, 0 skipped).
 - [ ] Manually test save migration, invalid snapshot fallback, and app relaunch in the original scene.
-- [ ] Investigate the two failures from the previous full Unity EditMode run (`GameSession_UndoRestoresAuthoritativeStateAndSnakeOccupancy` and `SampleLevel1_SolvesInExactExpectedOrder`); causes remain unknown.
 - [x] User confirmed the restart/celebration, game-over/restart, and restart-during-simulated-ad lifecycle checks are working in Play mode.
 - [x] Record source/build/EditMode-test evidence and the remaining PlayMode limitation before continuing lifecycle work.
 
