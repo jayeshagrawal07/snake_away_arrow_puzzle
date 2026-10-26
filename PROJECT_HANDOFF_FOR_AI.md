@@ -144,7 +144,7 @@ The original scene's baseline was manually checked by the user and reported as w
 - Unity menu command to generate three solver-checked sample level assets
 - This is not the planned visual path-drawing level editor.
 
-The existing game uses the procedural level generator in `Assets/Legacy/GameManager.cs`; the user confirmed it is the preferred product path. Keep improving that generator and the surrounding legacy game when needed. `Assets/Resources/Levels/` contains three sample assets for the separate modular prototype pipeline; their Editor loading, geometry, and solver checks passed in the 72/72 EditMode suite. These samples are not connected to the original game. A built-player check for this optional modular pipeline is deferred unless a concrete need is identified.
+The existing game uses the procedural level generator in `Assets/Legacy/GameManager.cs`; the user confirmed it is the preferred product path. Keep improving that generator and the surrounding legacy game when needed. The generator now restores Unity's global random state after seeded generation; the regression test passed as part of the 73/73 Unity EditMode run. `Assets/Resources/Levels/` contains three sample assets for the separate modular prototype pipeline; their Editor loading, geometry, and solver checks passed in the prior 72/72 EditMode run. These samples are not connected to the original game. A built-player check for this optional modular pipeline is deferred unless a concrete need is identified.
 
 ## Tests and validation evidence
 
@@ -158,6 +158,7 @@ EditMode test source files are under `Assets/Tests/EditMode/`:
 - `ApplicationTests`
 - `PlayerSaveServiceTests`
 - `LevelServiceTests` and `LevelServiceResourceTests`
+- `LegacyLevelGeneratorTests` (seeded random-state isolation)
 
 The Unity EditMode suite ran successfully with:
 
@@ -165,7 +166,7 @@ The Unity EditMode suite ran successfully with:
 Unity.exe -batchmode -nographics -projectPath "<project>" -runTests -testPlatform EditMode
 ```
 
-The latest run passed 72/72 tests. This does **not** confirm that either scene was play-tested or that authored levels load in a built player.
+The latest run passed 73/73 tests, including the legacy generator random-state regression test. This does **not** confirm that either scene was play-tested or that authored levels load in a built player.
 
 ## Known gaps and cautions
 

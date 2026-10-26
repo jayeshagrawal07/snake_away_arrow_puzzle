@@ -2184,8 +2184,25 @@ public class GameManager : MonoBehaviour
     // Pass 2 & 3 wrap medium and compact interlocking snakes around those long backbones so zero space is wasted!
     void GenerateAddictiveLongSpineMaze(int level, int seed, bool isDailyChallenge150Plus)
     {
-        Random.InitState(seed);
+        WithSeededRandomState(seed, () => GenerateAddictiveLongSpineMazeCore(level, seed, isDailyChallenge150Plus));
+    }
 
+    static void WithSeededRandomState(int seed, System.Action generate)
+    {
+        Random.State previousRandomState = Random.state;
+        try
+        {
+            Random.InitState(seed);
+            generate();
+        }
+        finally
+        {
+            Random.state = previousRandomState;
+        }
+    }
+
+    void GenerateAddictiveLongSpineMazeCore(int level, int seed, bool isDailyChallenge150Plus)
+    {
         int spineMinLen, spineMaxLen, targetSnakeCap;
         int shapeType = 0;
 

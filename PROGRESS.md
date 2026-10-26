@@ -150,7 +150,10 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Add Editor resource-loading coverage plus campaign sorting and ID-lookup tests.
 - [x] Fix `GridCoord` serialization so generated level assets retain snake-body coordinates; regenerate the three sample levels in `Assets/Resources/Levels/`.
 - [x] Validate every authored sample level’s saved geometry and solver result in Unity EditMode; full suite passed 72/72.
-- [ ] When level generation is next in scope, review the existing legacy procedural generator and make only evidence-driven fixes or cleanup; preserve its current behavior otherwise.
+- [x] Review the existing legacy procedural level generator; keep its seeded layouts deterministic while avoiding side effects on unrelated Unity randomness.
+- [x] Isolate deterministic legacy level generation from Unity's global random stream so generating a level does not shift random behavior elsewhere.
+- [x] Add the legacy random-state regression test; both gameplay and EditMode test assemblies compile with 0 warnings/errors.
+- [x] Run the full Unity EditMode suite with the legacy generator regression test; 73/73 passed (0 failed, 0 skipped).
 - [ ] Built-player validation of the separate modular authored-level pipeline is deferred; revisit only if that pipeline is selected for a concrete product need.
 - [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
 - [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
