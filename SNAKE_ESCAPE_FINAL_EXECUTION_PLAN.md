@@ -47,13 +47,13 @@ The modular code is optional reusable material, not proof that those systems pow
 - Modular application code includes session, move, undo, level, and progression services.
 - Modular presentation code includes a separate controller, board and snake views, input, HUD, and completion UI.
 - EditMode test source files exist for grid coordinates, occupancy, puzzle rules, solver, campaign validation, and application behavior.
-- The Unity EditMode suite has passed 72/72 tests, including authored campaign geometry/solver validation. Neither scene has been play-tested as part of this validation.
+- The Unity EditMode suite has passed 73/73 tests, including authored campaign geometry/solver checks and legacy generator random-state isolation. These automated tests are not scene or device tests.
 
 ### Known issues to resolve or explicitly track
 
-1. The legacy implementation is tightly coupled and has no known integration with modular `GameSession` / `PuzzleRules`.
-2. Three authored sample `.asset` levels are generated and validated; the modular controller still generates puzzles procedurally.
-3. The generator and `LevelService` now share `Assets/Resources/Levels/`; loading in a built player remains unverified.
+1. The legacy implementation is tightly coupled; refactor only around specific maintenance or behavior needs while preserving its existing gameplay.
+2. Three authored sample `.asset` levels exist for the separate modular prototype; they are not the product campaign.
+3. The modular `Resources/Levels` loader was tested in the Editor; built-player validation is deferred unless the modular pipeline is selected for a concrete need.
 4. Some modular HUD events (including pause/settings/hint/guide-related actions) are not wired through the modular controller.
 5. Modular `ProgressionService` is not used by the modular controller's current level loop.
 6. The configured original scene must be tested directly; modular prototype behavior cannot be used as evidence for original-scene behavior.
@@ -108,9 +108,9 @@ Keep the legacy scene and presentation during migration, but move toward these o
 
 Do not force a large refactor to achieve this diagram. Establish seams around individual behaviors while retaining existing serialized scene references and user-facing presentation.
 
-### Level data and loading decision
+### Existing level-generation decision
 
-**Decision:** Use `Assets/Resources/Levels/` as the canonical authored-level location. The editor generator writes there, and `LevelService` loads from `Resources/Levels`, so Unity includes these assets in player builds. Do not duplicate level assets to hide path mismatches. EditMode coverage verifies Editor loading; add and run a built-player check proving the same authored level loads there.
+**Product decision:** Continue using the existing procedural generator in `Assets/Legacy/GameManager.cs`. Preserve and improve it when a concrete issue is identified. The three assets under `Assets/Resources/Levels/` are a separate modular prototype experiment, not a replacement or required product pipeline. Do not spend time integrating or validating that optional pipeline as a release path unless a specific need is established and discussed with the user.
 
 ---
 
@@ -140,35 +140,35 @@ Complete these phases in order. Each phase ends with a report of files changed, 
 
 **Gate:** Existing core flows are documented, and critical regressions can be detected. No visual redesign or large rewrite in this phase.
 
-### Phase 2 — Verify and harden the modular domain engine
+### Phase 2 — Verify shared rules where they are used
 
 **Tasks**
-- Audit `GridCoord`, definitions, `OccupancyMap`, `PuzzleState`, `PuzzleRules`, `MoveResult`, and `PuzzleSolver` against the actual legacy rules.
-- Add/repair EditMode tests for route boundaries, long snakes, edge exits, self-blocking exclusion, overlap rejection, escaped snakes, repeated input/reservations, invalid data, no-mutation-on-rejection, win detection, and solver search-limit semantics.
-- Ensure solver outcomes distinguish solvable, proven unsolvable, invalid data, and search limit reached.
-- Compare modular and legacy outcomes on representative level fixtures before adopting shared logic.
+- Identify a specific need in the existing game before reusing or extracting shared rule logic.
+- For shared logic already used by the legacy game, add or retain focused EditMode coverage for route boundaries, blockers, escaped snakes, invalid input, and side-effect-free rejected moves.
+- Compare shared-rule outcomes with existing legacy behavior before changing who owns gameplay state or movement timing.
+- Leave unrelated modular-only features alone unless they address a demonstrated product need.
 
-**Gate:** Domain behavior is deterministic and tested, and compatibility gaps are documented. Do not integrate incompatible path rules just because the code compiles.
+**Gate:** Any shared logic used in the original game is deterministic, tested, and behavior-compatible. Do not integrate modular services just because they compile.
 
-### Phase 3 — First integration slice in the original scene
-
-**Tasks**
-- Select one bounded behavior—preferably route validation for a single snake move—as the first integration slice.
-- Route that behavior through one application-level entry point while preserving the original scene, input feel, visuals, and serialized UI.
-- Keep animation separate from legality. Reserve a valid move, animate, then commit state exactly once.
-- Keep the legacy implementation available until parity is verified; use an adapter/bridge if it is safer than replacing a subsystem.
-- Add regression tests and manually test valid and blocked moves in the original scene.
-
-**Gate:** Original scene still loads; valid and blocked moves behave correctly; rejected moves do not alter state; no duplicate occupancy or input race is observed. If not, revert or fix this slice before proceeding.
-
-### Phase 4 — Integrate lifecycle and state reliability
+### Phase 3 — Incremental improvements in the original scene
 
 **Tasks**
-- Integrate restart, undo (if included), pause/resume, level transitions, completion, and save/progression incrementally.
-- Define and test explicit states: initializing, ready, moving, paused, level complete, loading, and error/invalid level.
-- Prevent input during transitions and ensure restart/scene changes cancel or safely reset animation and temporary effects.
-- Preserve established features such as hints, guides, score/coins, lives/mistakes, and menus. Wire each feature to the new path only after its behavior is mapped and tested.
-- Add save versioning and safe handling for missing or malformed data without losing normal progress.
+- Select one concrete issue or improvement in the legacy game per change.
+- Prefer extending or correcting the existing owner over routing the behavior through a new application layer.
+- Preserve the original scene, input feel, visuals, serialized UI, and established gameplay decisions.
+- Add focused regression tests and manually verify affected behavior in the original scene.
+- Extract or replace a legacy responsibility only when a demonstrated need justifies it and behavior parity can be verified.
+
+**Gate:** The original scene still loads and the targeted improvement works without regressions to the surrounding legacy gameplay.
+
+### Phase 4 — Maintain lifecycle and state reliability
+
+**Tasks**
+- Preserve the existing lifecycle, save/progression, and UI behavior while correcting specific reliability issues.
+- Define and test lifecycle states only where this helps fix a real transition or state bug.
+- Prevent stale animations, callbacks, or overlays from affecting a restarted level or a later transition.
+- Keep established hints, guides, score/coins, lives/mistakes, and menus working; do not wire them to a replacement path without an agreed need.
+- Maintain safe save migration and malformed-data fallback without losing normal progress.
 
 **Gate:** The original game survives repeated moves, blocked taps, restart during movement, pause/resume, repeated completion, and app relaunch without softlocks or unexpected progress loss.
 
@@ -183,7 +183,7 @@ Complete these phases in order. Each phase ends with a report of files changed, 
 
 **Gate:** Existing levels remain correctly generated and playable through the original game's progression, and any generator changes are covered by relevant checks and verified in context.
 
-**Current status:** The existing product continues using its legacy procedural generator. Three levels in `Assets/Resources/Levels/` belong to a separate modular prototype experiment and passed Editor geometry/solver/resource-loading checks in the 72/72 EditMode suite. Per the user's direction, built-player validation and product integration of this optional pipeline are deferred.
+**Current status:** The existing product continues using its legacy procedural generator. Its seeded generation now restores Unity's global random state, the regression test passes, and the user confirmed the change works in Play mode. Three levels in `Assets/Resources/Levels/` belong to a separate modular prototype experiment; they are not the next product task. Per the user's direction, built-player loading and integration of this optional pipeline are deferred.
 
 ### Phase 6 — Campaign quality and progression
 
@@ -296,22 +296,12 @@ Wait for approval before major architectural changes, deleting legacy responsibi
 
 ## 9. Immediate next task
 
-**Phase 0/1 audit and the first route/result integration slice are complete.** The original scene remains the product baseline. The user asked us to assume that clear escapes, blocked-move return/life penalty, and concurrent escapes continue working; this is an accepted working assumption, not a PlayMode verification after the latest code change.
+**Current status:** The original scene and legacy procedural generator remain the product baseline. The recent generator change preserves deterministic layouts while restoring Unity's global random state afterward. Both gameplay and EditMode test assemblies compiled with 0 warnings/errors, the full Unity EditMode suite passed **73/73**, and the user confirmed the change works in Play mode. Save persistence after relaunch has also been user-confirmed. These checks do not claim device or release-build validation.
 
-`EscapeRouteGeometry` now supplies the route projection, first-blocker count, and valid/blocked `MoveResult` used by the legacy manager and `SnakeController`. Legacy occupancy filtering, life handling, blocked animation, and concurrent-move scheduling remain in their existing owners. Serialized builds of `Assembly-CSharp.csproj` and `SnakeEscape.Tests.EditMode.csproj` succeeded with 0 warnings/errors. Unity batch-mode EditMode testing passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped), including route parity and move-result payload tests. The user confirmed the completion-screen edge fix looks correct in Game view.
+**Next task:** Audit the existing generator's progression boundaries—especially levels 5–7, where board sizes and generation patterns change—and representative later levels such as 13. Check repeatability for the same level seed, in-bounds and non-overlapping snake paths, sensible snake counts and board coverage, and that generated puzzles remain playable under the existing rules. First inspect or build a safe test harness; do not alter the user's saved level or replace the generator. Make a code change only if the audit finds a concrete defect, then add a focused regression test and verify it in the original scene.
 
-The Phase 4 static trace identified a restart-during-escape cleanup gap: escaped snakes are removed from `activeSnakes` before their animation completes, while level restart previously destroyed only `activeSnakes`. The manager now tracks every level snake for reset cleanup; level-generation tokens also invalidate old victory/confetti routines on restart or challenge transition. The user confirmed restart/celebration behavior in Play mode. A further trace found the delayed game-over coroutine could display an old modal after restart; it now checks the level-generation token after its delay. The user confirmed that game-over followed by restart and restart during a simulated ad work as expected.
-
-The delayed-game-over guard compiled successfully in `Assembly-CSharp.csproj`; the EditMode test assembly also built with 0 warnings/errors. Unity batch-mode testing passed all 27 `PuzzleRulesTests` (0 failed, 0 skipped). The user confirmed that both game-over-followed-by-restart and restart-during-simulated-ad flows work in Play mode. This is user-reported manual validation, not automated regression coverage.
-
-The pause/in-flight-effects audit also found that simulated-ad coroutines use unscaled time and can outlive a level reset. They now capture the level-generation token, hide their overlay on reset, and skip stale reward callbacks. The user confirmed the flow works in Play mode.
-
-The first save-hardening slice clamps negative saved level/resource/currency counters and saturates coin rewards at `int.MaxValue`. `PlayerSaveService` adds a checksummed schema-v1 JSON snapshot while retaining the existing `SnakePuzzle_*` keys as mirrors. It migrates valid legacy values when the snapshot is missing or invalid, preserves legacy values if the fresh-start marker is absent, and only initializes defaults when no legacy progress fields exist (unless the explicit reset flag is set). All 6 focused save-service EditMode tests passed. Original-scene PlayMode persistence/relaunch checks remain pending.
-
-A full Unity batch-mode EditMode run after these changes compiled the project and passed all 68 tests (0 failed, 0 skipped). Two earlier test failures were resolved by correcting the undo fixture's missing snapshot and updating a stale two-snake sample-level expectation to validate the current generated level deterministically. The earlier focused 27/27 `PuzzleRulesTests` run predates this save change.
-
-**Next:** Validate authored campaign levels with the solver and level validator, then confirm the Resources asset loads in a built player. The user confirmed original-scene save persistence works after Play-mode relaunch. Authored-level loading remains modular and is not integrated into the original product scene.
+**Deferred:** The three `Assets/Resources/Levels/` samples and their separate loader are modular prototype work. Do not build or integrate that pipeline unless a specific product need is identified and discussed with the user.
 
 Preserve all existing worktree changes.
 
-**Final priority:** Preserve the product → characterize behavior → verify domain rules → integrate one behavior at a time → stabilize lifecycle/save → fix level pipeline and validator → produce verified campaign → polish → QA/release → optional monetization.
+**Final priority:** Preserve the existing product → characterize behavior → fix demonstrated issues in existing systems → verify each change → improve campaign quality where needed → polish → QA/release → optional monetization. Modularize or add new systems only when they solve an established need.
