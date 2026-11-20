@@ -2,7 +2,7 @@
 
 **Purpose:** Give an AI coding assistant a factual, concise map of the Unity project so it can continue work without replacing existing work or confusing the prototype with the original game.
 
-**Project inspected:** October 24, 2026  
+**Project inspected:** November 20, 2026
 **Unity editor version:** `6000.6.1f1`  
 **Primary language:** C#
 
@@ -83,9 +83,13 @@ This map was derived from the scene and scripts; it is not a Unity PlayMode veri
 7. **Restart and next level:** The pause modal's restart action calls `LoadLevel(currentLevel)` (or restarts challenge gameplay); `LoadLevel` clears active snake GameObjects and rebuilds the selected level. The win modal routes to `NextLevel`, which increments the level and calls `LoadLevel`.
 8. **Pause and settings:** The runtime-created pause button calls `TogglePause`; the pause modal offers continue, restart, and main-menu actions. Settings buttons open the runtime-built settings modal.
 9. **Hint and grid guide:** Runtime HUD button listeners call `GiveHint` and `UseGridGuide`. The hint highlights an available snake and consumes a saved hint. The grid guide is a separate assist with its own counter/save state.
-10. **Undo:** No legacy undo control, undo stack, or undo method was found in `GameManager.cs` or `SnakeController.cs`. Undo exists only in the modular application code unless another scene/object outside this trace provides it.
+10. **Undo:** The updated legacy HUD displays an Undo booster, but it currently opens an explicit “not available” notice. There is still no legacy undo stack or restore method; undo exists only in the modular application code.
 
 **Initial behavioral risks to verify, not confirmed runtime bugs:** simultaneous escapes may be possible because the manager has no visible global moving-state gate; completion bookkeeping starts before the last snake's exit animation ends; blocked moves consume lives although the target specification says standard mode should not punish them. Preserve current behavior until product decisions and baseline tests are agreed.
+
+**Latest UI/rendering update (November 20, 2026):** The active legacy `GameManager` now builds the white home dashboard, Challenges screen, and updated gameplay HUD at runtime. Challenge entries include 1-Minute Rush, Zero Hearts, 1-Heart Survival, and Move Master (unlocked at level 30); Play Friends opens a Coming Soon notice. Existing campaign generation, PlayerPrefs-backed save/progression, and challenge reward/unlock flow remain the active systems. The HUD uses an integrated snake-count progress bar, a vector clock instead of the unsupported timer emoji, and circular booster controls. The Hint control uses `Assets/Glossy Glowing Light Bulb Icon.png`; its importer is configured as a single bilinear sprite with mipmaps disabled and uncompressed platform settings. Snake exit speed is `11f` with a smooth launch ramp and tapered line rendering. Canvas scaling is set to 1080x1920, Match 0.5, with pixel-perfect disabled; 4x MSAA is configured in quality settings and at runtime.
+
+**Latest compile evidence:** `dotnet build Assembly-CSharp.csproj --no-restore` succeeded on November 20, 2026 with 0 warnings and 0 errors. This is a C# assembly compile, not verification of the Unity Editor Console, PlayMode behavior, or Android device rendering. No post-change PlayMode or device validation has been run.
 
 **Completion-screen edge fix:** The win modal uses a dedicated square-edged sunburst sprite stretched to the full Canvas; popup cards continue using the rounded sunburst sprite. This prevents transparent rounded corners from exposing the layer behind the completion screen.
 

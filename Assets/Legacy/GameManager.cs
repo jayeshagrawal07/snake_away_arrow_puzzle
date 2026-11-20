@@ -9,6 +9,31 @@ using SnakeEscape.Application;
 
 public class GameManager : MonoBehaviour
 {
+    private enum ChallengeMode
+    {
+        Daily,
+        OneMinuteRush,
+        ZeroHearts,
+        OneHeartSurvival,
+        MoveMaster
+    }
+
+    private enum UiIcon
+    {
+        Home,
+        Users,
+        Gift,
+        Lock,
+        User,
+        Clock,
+        Undo,
+        Reset,
+        Shield,
+        Heart,
+        Bolt,
+        Navigation
+    }
+
     public static GameManager Instance;
 
     [Header("Level, Coins & Player State")]
@@ -36,6 +61,7 @@ public class GameManager : MonoBehaviour
     public Sprite winnerIconSprite;
     public Sprite pauseAssetSprite;
     public Sprite settingsAssetSprite;
+    public Sprite hintIconSprite;
 
     [HideInInspector] public float currentSpacing = 0.45f;
 
@@ -52,9 +78,12 @@ public class GameManager : MonoBehaviour
     private int lockedLevelSeed = 0;
     private int lastGeneratedLevel = -1;
     private int challengeRunCount = 0;
+    private int challengeTapCount;
     private int eraserFreeUseLevel;
     private int levelGeneration = 0;
     private bool isCurrentChallengeUnlocked = false;
+    private ChallengeMode selectedChallengeMode = ChallengeMode.Daily;
+    private ChallengeMode activeChallengeMode = ChallengeMode.Daily;
     private PlayerSaveService playerSaveService;
     private LegacyAudioFeedback audioFeedback;
     private TextMeshProUGUI soundEffectsToggleBtnText;
@@ -65,13 +94,15 @@ public class GameManager : MonoBehaviour
     private int lastLayoutScreenHeight = -1;
     private Rect lastLayoutSafeArea;
     private float lastLayoutScaleFactor = -1f;
-    private bool lastLayoutWasLandscape;
 
     private sealed class SafeAreaAnchor
     {
         public RectTransform rectTransform;
         public Vector2 basePosition;
+        public Vector2 baseSizeDelta;
         public Vector2 anchorPoint;
+        public bool horizontalStretch;
+        public bool verticalStretch;
     }
 
     // Milestone & Timer State (3 Minutes = 180s)
@@ -99,8 +130,12 @@ public class GameManager : MonoBehaviour
     private TextMeshProUGUI gridGuideCoinButtonText;
     private Button eraserFreeButton;
     private TextMeshProUGUI eraserCoinButtonText;
-    private TextMeshProUGUI homeContinueBtnText;
     private TextMeshProUGUI homeCoinText;
+    private TextMeshProUGUI challengeCoinText;
+    private TextMeshProUGUI homePlayLevelText;
+    private TextMeshProUGUI homeMilestoneBadgeText;
+    private TextMeshProUGUI homeLevelNavText;
+    private TextMeshProUGUI modeSubtitleText;
     private TextMeshProUGUI challengeEntryCoinText;
     private TextMeshProUGUI hapticsToggleBtnText;
 
@@ -116,6 +151,10 @@ public class GameManager : MonoBehaviour
     // Overlays & Modals
     private Image damageVignette;
     private GameObject homeScreenObj;
+    private GameObject challengesScreenObj;
+    private GameObject homeNoticeModalObj;
+    private TextMeshProUGUI homeNoticeTitleText;
+    private TextMeshProUGUI homeNoticeMessageText;
     private GameObject settingsModalObj;
     private GameObject challengeEntryModalObj;
     private GameObject multiplayerModalObj;
@@ -128,6 +167,12 @@ public class GameManager : MonoBehaviour
     private GameObject eraserModalObj;
     private GameObject adSimOverlayObj;
     private TextMeshProUGUI adSimTimerText;
+    private Image timerClockIcon;
+    private RectTransform homePlayButtonRect;
+    private RectTransform homeShimmerRect;
+    private float homeAnimationTime;
+    private Transform snakeCountPill;
+    private readonly Dictionary<UiIcon, Sprite> uiIconSprites = new Dictionary<UiIcon, Sprite>();
 
     // Rotating Sunburst Transforms
     private List<RectTransform> activeSunburstRays = new List<RectTransform>();
@@ -174,6 +219,8 @@ public class GameManager : MonoBehaviour
             pauseAssetSprite = FindSpriteByKeyword("pause");
         if (settingsAssetSprite == null)
             settingsAssetSprite = FindSpriteByKeyword("settings");
+        if (hintIconSprite == null)
+            hintIconSprite = FindSpriteByKeyword("Glossy Glowing Light Bulb Icon");
     }
 
     Sprite FindSpriteByKeyword(string keyword)
@@ -193,7 +240,7 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Instance = this;
-        QualitySettings.antiAliasing = 8;
+        QualitySettings.antiAliasing = 4;
         Application.targetFrameRate = 60;
 
 #if UNITY_EDITOR
@@ -290,6 +337,7 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         UpdateResponsiveCanvasLayout();
+        UpdateHomeAnimations();
         if (levelProgressFill != null)
             levelProgressFill.fillAmount = Mathf.MoveTowards(
                 levelProgressFill.fillAmount, targetLevelProgress, Time.unscaledDeltaTime * 0.45f);
@@ -302,7 +350,7 @@ public class GameManager : MonoBehaviour
             }
         }
 
-        if (isPaused) return;
+            if (isPaused) return;
         if (homeScreenObj != null && homeScreenObj.activeSelf) return;
 
         // Point 9: 3-Minute Timer + 50% Timer Completed Ad Offer Popup
@@ -310,7 +358,8 @@ public class GameManager : MonoBehaviour
         {
             timeRemaining -= Time.deltaTime;
 
-            if (!halfTimePopupShown && timeRemaining <= (totalTimerDuration * 0.5f) && timeRemaining > 2f)
+            bool showHalfTimeOffer = !isChallengeMode || activeChallengeMode == ChallengeMode.Daily;
+            if (showHalfTimeOffer && !halfTimePopupShown && timeRemaining <= (totalTimerDuration * 0.5f) && timeRemaining > 2f)
             {
                 halfTimePopupShown = true;
                 isPaused = true;
@@ -469,12 +518,16 @@ public class GameManager : MonoBehaviour
             c.pixelPerfect = false;
         }
 
+        if (canvasObj.GetComponent<GraphicRaycaster>() == null)
+            canvasObj.AddComponent<GraphicRaycaster>();
         CanvasScaler cs = canvasObj.GetComponent<CanvasScaler>();
+        if (cs == null)
+            cs = canvasObj.AddComponent<CanvasScaler>();
         if (cs != null)
         {
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             cs.referenceResolution = new Vector2(1080, 1920);
-            cs.matchWidthOrHeight = Screen.width > Screen.height ? 1f : 0.5f;
+            cs.matchWidthOrHeight = 0.5f;
         }
 
         string[] unwantedHUD = { "TopRestartButton", "TopCoinWallet", "BottomChallengeBtn", "ChallengeHubModal" };
@@ -531,6 +584,7 @@ public class GameManager : MonoBehaviour
         if (snakeCountText != null)
         {
             GameObject countBg = EnsureCardBackground(snakeCountText.transform, canvasObj.transform, "CountBoxBG", new Vector2(0f, 1f), new Vector2(142f, -225f), new Vector2(204f, 84f), pillSprite);
+            snakeCountPill = countBg.transform;
 
             Transform iconTr = countBg.transform.Find("MiniSnakeIcon");
             GameObject iconObj = iconTr != null ? iconTr.gameObject : new GameObject("MiniSnakeIcon");
@@ -544,16 +598,17 @@ public class GameManager : MonoBehaviour
             iconRt.anchorMin = new Vector2(0f, 0.5f);
             iconRt.anchorMax = new Vector2(0f, 0.5f);
             iconRt.pivot = new Vector2(0.5f, 0.5f);
-            iconRt.anchoredPosition = new Vector2(52f, 0f);
-            iconRt.sizeDelta = new Vector2(46f, 46f);
+            iconRt.anchoredPosition = new Vector2(38f, 8f);
+            iconRt.sizeDelta = new Vector2(42f, 42f);
 
+            snakeCountText.transform.SetParent(countBg.transform, false);
             RectTransform rt = snakeCountText.GetComponent<RectTransform>();
-            rt.anchorMin = new Vector2(0f, 1f);
-            rt.anchorMax = new Vector2(0f, 1f);
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(168f, -225f);
-            rt.sizeDelta = new Vector2(124f, 84f);
-            StyleBoldTMP(snakeCountText, 44f, new Color(0.06f, 0.10f, 0.18f));
+            rt.anchoredPosition = new Vector2(125f, 12f);
+            rt.sizeDelta = new Vector2(110f, 48f);
+            StyleBoldTMP(snakeCountText, 38f, new Color(0.06f, 0.10f, 0.18f));
         }
 
         // 3. Top Right Card: Difficulty Pill
@@ -613,6 +668,7 @@ public class GameManager : MonoBehaviour
         }
 
         // 5. Clean Top-Left Pause, Top-Right Settings & 3-Min Timer Pill
+        SetupGameplayHudStrip(canvasObj.transform);
         SetupCleanGameplayHUD(canvasObj.transform);
         SetupLevelProgressBar(canvasObj.transform);
 
@@ -630,7 +686,9 @@ public class GameManager : MonoBehaviour
         BuildHalfTimeRemoveTimerModal(canvasObj.transform);
         BuildEraserModal(canvasObj.transform);
         BuildHomeScreen(canvasObj.transform);
+        BuildChallengesScreen(canvasObj.transform);
         BuildDailyChallengeEntryModal(canvasObj.transform);
+        BuildHomeNoticeModal(canvasObj.transform);
         BuildMultiplayerComingSoonModal(canvasObj.transform);
         BuildSimulatedAdOverlay(canvasObj.transform);
 
@@ -658,18 +716,32 @@ public class GameManager : MonoBehaviour
             button.onClick.AddListener(PlayButtonSound);
     }
 
+    void SetupGameplayHudStrip(Transform canvasTr)
+    {
+        Transform existing = canvasTr.Find("GameplayHudStrip");
+        if (existing != null) Destroy(existing.gameObject);
+
+        GameObject strip = new GameObject("GameplayHudStrip");
+        strip.transform.SetParent(canvasTr, false);
+        Image background = strip.AddComponent<Image>();
+        background.sprite = roundedCardSprite;
+        background.type = Image.Type.Sliced;
+        background.color = new Color(0.973f, 0.980f, 0.988f, 1f);
+        background.raycastTarget = false;
+        RectTransform rect = strip.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 1f);
+        rect.anchorMax = rect.anchorMin;
+        rect.anchoredPosition = new Vector2(0f, -225f);
+        rect.sizeDelta = new Vector2(972f, 112f);
+        strip.transform.SetAsFirstSibling();
+    }
+
     void UpdateResponsiveCanvasLayout()
     {
         if (responsiveCanvas == null || responsiveCanvasScaler == null)
             return;
 
-        bool isLandscape = Screen.width > Screen.height;
-        if (isLandscape != lastLayoutWasLandscape)
-        {
-            responsiveCanvasScaler.matchWidthOrHeight = isLandscape ? 1f : 0.5f;
-            lastLayoutWasLandscape = isLandscape;
-            Canvas.ForceUpdateCanvases();
-        }
+        responsiveCanvasScaler.matchWidthOrHeight = 0.5f;
 
         Rect safeArea = Screen.safeArea;
         if (safeArea.width <= 0f || safeArea.height <= 0f)
@@ -696,10 +768,30 @@ public class GameManager : MonoBehaviour
                 continue;
             }
 
-            Vector2 inset = new Vector2(
-                Mathf.Lerp(leftInset, -rightInset, anchor.anchorPoint.x),
-                Mathf.Lerp(bottomInset, -topInset, anchor.anchorPoint.y));
-            anchor.rectTransform.anchoredPosition = anchor.basePosition + inset;
+            Vector2 position = anchor.basePosition;
+            Vector2 size = anchor.baseSizeDelta;
+            if (anchor.horizontalStretch)
+            {
+                position.x += (leftInset - rightInset) * 0.5f;
+                size.x -= leftInset + rightInset;
+            }
+            else
+            {
+                position.x += Mathf.Lerp(leftInset, -rightInset, anchor.anchorPoint.x);
+            }
+
+            if (anchor.verticalStretch)
+            {
+                position.y += (bottomInset - topInset) * 0.5f;
+                size.y -= bottomInset + topInset;
+            }
+            else
+            {
+                position.y += Mathf.Lerp(bottomInset, -topInset, anchor.anchorPoint.y);
+            }
+
+            anchor.rectTransform.anchoredPosition = position;
+            anchor.rectTransform.sizeDelta = size;
         }
 
         lastLayoutScreenWidth = Screen.width;
@@ -720,13 +812,18 @@ public class GameManager : MonoBehaviour
                 continue;
 
             bool fillsParent = child.anchorMin == Vector2.zero && child.anchorMax == Vector2.one;
-            if (!fillsParent && child.anchorMin == child.anchorMax)
+            bool horizontalStretch = !Mathf.Approximately(child.anchorMin.x, child.anchorMax.x);
+            bool verticalStretch = !Mathf.Approximately(child.anchorMin.y, child.anchorMax.y);
+            if (!fillsParent && !verticalStretch)
             {
                 safeAreaAnchors.Add(new SafeAreaAnchor
                 {
                     rectTransform = child,
                     basePosition = child.anchoredPosition,
-                    anchorPoint = child.anchorMin
+                    baseSizeDelta = child.sizeDelta,
+                    anchorPoint = new Vector2((child.anchorMin.x + child.anchorMax.x) * 0.5f, child.anchorMin.y),
+                    horizontalStretch = horizontalStretch,
+                    verticalStretch = verticalStretch
                 });
             }
 
@@ -747,9 +844,22 @@ public class GameManager : MonoBehaviour
         if (pauseButton == null) pauseButton = pauseObj.AddComponent<Button>();
         Image pauseImg = pauseObj.GetComponent<Image>();
         if (pauseImg == null) pauseImg = pauseObj.AddComponent<Image>();
-        pauseImg.sprite = pauseAssetSprite != null ? pauseAssetSprite : CreateCrispPauseIconSprite(256);
-        pauseImg.color = Color.white;
-        pauseImg.preserveAspect = true;
+        pauseImg.sprite = roundedCardSprite;
+        pauseImg.color = new Color(0.97f, 0.98f, 1f);
+        Shadow pauseShadow = pauseObj.GetComponent<Shadow>();
+        if (pauseShadow == null) pauseShadow = pauseObj.AddComponent<Shadow>();
+        pauseShadow.effectColor = new Color(0.12f, 0.24f, 0.42f, 0.10f);
+        pauseShadow.effectDistance = new Vector2(0f, -4f);
+
+        GameObject pauseIconObject = new GameObject("PauseGlyph");
+        pauseIconObject.transform.SetParent(pauseObj.transform, false);
+        Image pauseIcon = pauseIconObject.AddComponent<Image>();
+        pauseIcon.sprite = pauseAssetSprite != null ? pauseAssetSprite : CreateCrispPauseIconSprite(256);
+        pauseIcon.color = new Color(0.15f, 0.39f, 0.78f);
+        pauseIcon.preserveAspect = true;
+        pauseIcon.raycastTarget = false;
+        RectTransform pauseIconRect = pauseIconObject.GetComponent<RectTransform>();
+        pauseIconRect.sizeDelta = new Vector2(42f, 42f);
 
         RectTransform pauseRt = pauseObj.GetComponent<RectTransform>();
         pauseRt.anchorMin = new Vector2(0f, 1f);
@@ -769,9 +879,23 @@ public class GameManager : MonoBehaviour
         if (setBtn == null) setBtn = setObj.AddComponent<Button>();
         Image setImg = setObj.GetComponent<Image>();
         if (setImg == null) setImg = setObj.AddComponent<Image>();
-        setImg.sprite = gearIconSprite;
-        setImg.color = Color.white;
-        setImg.preserveAspect = true;
+        setImg.sprite = roundedCardSprite;
+        setImg.color = new Color(0.97f, 0.98f, 1f);
+        Shadow settingsShadow = setObj.GetComponent<Shadow>();
+        if (settingsShadow == null) settingsShadow = setObj.AddComponent<Shadow>();
+        settingsShadow.effectColor = new Color(0.12f, 0.24f, 0.42f, 0.10f);
+        settingsShadow.effectDistance = new Vector2(0f, -4f);
+
+        Transform oldSettingsIcon = setObj.transform.Find("SettingsGlyph");
+        if (oldSettingsIcon != null) Destroy(oldSettingsIcon.gameObject);
+        GameObject settingsIconObject = new GameObject("SettingsGlyph");
+        settingsIconObject.transform.SetParent(setObj.transform, false);
+        Image settingsIcon = settingsIconObject.AddComponent<Image>();
+        settingsIcon.sprite = gearIconSprite;
+        settingsIcon.color = new Color(0.15f, 0.20f, 0.29f);
+        settingsIcon.preserveAspect = true;
+        settingsIcon.raycastTarget = false;
+        settingsIconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(42f, 42f);
 
         RectTransform setRt = setObj.GetComponent<RectTransform>();
         setRt.anchorMin = new Vector2(1f, 1f);
@@ -782,6 +906,20 @@ public class GameManager : MonoBehaviour
 
         setBtn.onClick.RemoveAllListeners();
         setBtn.onClick.AddListener(() => { TriggerHaptic(false); OpenSettingsModal(); });
+
+        Transform oldSubtitle = canvasTr.Find("ModeSubtitle");
+        if (oldSubtitle != null) Destroy(oldSubtitle.gameObject);
+        GameObject subtitleObject = new GameObject("ModeSubtitle");
+        subtitleObject.transform.SetParent(canvasTr, false);
+        modeSubtitleText = subtitleObject.AddComponent<TextMeshProUGUI>();
+        modeSubtitleText.text = "Classic Puzzle";
+        StyleBoldTMP(modeSubtitleText, 24f, new Color(0.48f, 0.54f, 0.63f));
+        RectTransform subtitleRect = subtitleObject.GetComponent<RectTransform>();
+        subtitleRect.anchorMin = new Vector2(0.5f, 1f);
+        subtitleRect.anchorMax = new Vector2(0.5f, 1f);
+        subtitleRect.pivot = new Vector2(0.5f, 0.5f);
+        subtitleRect.anchoredPosition = new Vector2(0f, -166f);
+        subtitleRect.sizeDelta = new Vector2(440f, 36f);
 
         Transform oldTimer = canvasTr.Find("TopTimerPill");
         if (oldTimer != null) Destroy(oldTimer.gameObject);
@@ -803,9 +941,22 @@ public class GameManager : MonoBehaviour
         timerText = tTxtObj.AddComponent<TextMeshProUGUI>();
         StyleBoldTMP(timerText, 34f, new Color(0.85f, 0.25f, 0.05f));
         RectTransform ttRt = tTxtObj.GetComponent<RectTransform>();
-        ttRt.anchorMin = Vector2.zero;
-        ttRt.anchorMax = Vector2.one;
-        ttRt.sizeDelta = Vector2.zero;
+        ttRt.anchorMin = new Vector2(0.5f, 0.5f);
+        ttRt.anchorMax = new Vector2(0.5f, 0.5f);
+        ttRt.anchoredPosition = new Vector2(18f, 0f);
+        ttRt.sizeDelta = new Vector2(160f, 58f);
+
+        GameObject clockObject = new GameObject("ClockIcon");
+        clockObject.transform.SetParent(timerPillObj.transform, false);
+        timerClockIcon = clockObject.AddComponent<Image>();
+        timerClockIcon.sprite = GetOrCreateUiIconSprite(UiIcon.Clock);
+        timerClockIcon.color = new Color(0.85f, 0.25f, 0.05f);
+        timerClockIcon.raycastTarget = false;
+        RectTransform clockRect = clockObject.GetComponent<RectTransform>();
+        clockRect.anchorMin = new Vector2(0.5f, 0.5f);
+        clockRect.anchorMax = new Vector2(0.5f, 0.5f);
+        clockRect.anchoredPosition = new Vector2(-78f, 0f);
+        clockRect.sizeDelta = new Vector2(34f, 34f);
     }
 
     // Point 6: Bottom Hint Bulb Button (Left) + Grid Guide Ruler Button (Right) (matching image (6).jpg!)
@@ -817,19 +968,35 @@ public class GameManager : MonoBehaviour
             rt.anchorMin = new Vector2(0.5f, 0f);
             rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(-310f, 185f);
-            rt.sizeDelta = new Vector2(160f, 160f);
+            rt.anchoredPosition = new Vector2(-435f, 190f);
+            rt.sizeDelta = new Vector2(116f, 116f);
 
             for (int i = hintButton.transform.childCount - 1; i >= 0; i--)
                 Destroy(hintButton.transform.GetChild(i).gameObject);
 
             Image btnImg = hintButton.GetComponent<Image>();
             if (btnImg == null) btnImg = hintButton.gameObject.AddComponent<Image>();
-            btnImg.sprite = CreateArrowPuzzleHintButtonSprite(256, true, false);
+            btnImg.sprite = circleSprite;
             btnImg.color = Color.white;
-            btnImg.preserveAspect = true;
+            btnImg.raycastTarget = true;
 
-            hintBadgeText = CreateHudCountBadge(hintButton.transform, "HintCountBadge", new Vector2(160f, 160f));
+            Shadow hintShadow = hintButton.GetComponent<Shadow>();
+            if (hintShadow == null) hintShadow = hintButton.gameObject.AddComponent<Shadow>();
+            hintShadow.effectColor = new Color(0.22f, 0.32f, 0.48f, 0.16f);
+            hintShadow.effectDistance = new Vector2(0f, -5f);
+
+            GameObject hintIconObject = new GameObject("HintBulbIcon");
+            hintIconObject.transform.SetParent(hintButton.transform, false);
+            Image hintIcon = hintIconObject.AddComponent<Image>();
+            if (hintIconSprite == null)
+                Debug.LogError("The Gameplay Hint button requires the Glossy Glowing Light Bulb Icon sprite.", this);
+            hintIcon.sprite = hintIconSprite;
+            hintIcon.preserveAspect = true;
+            hintIcon.raycastTarget = false;
+            hintIconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(82f, 82f);
+
+            hintBadgeText = CreateHudCountBadge(hintButton.transform, "HintCountBadge", new Vector2(116f, 116f));
+            CreateBoosterLabel(hintButton.transform, "HintLabel", "Hint", 116f);
 
             hintButton.onClick.RemoveAllListeners();
             hintButton.onClick.AddListener(() => { TriggerHaptic(false); GiveHint(); });
@@ -848,24 +1015,45 @@ public class GameManager : MonoBehaviour
         gridBtnObj.transform.SetParent(canvasTr, false);
         Button gridBtn = gridBtnObj.AddComponent<Button>();
         Image gImg = gridBtnObj.AddComponent<Image>();
-        gImg.sprite = gridGuideButtonSprite;
+        gImg.sprite = circleSprite;
         gImg.color = Color.white;
-        gImg.preserveAspect = true;
+        Shadow gridShadow = gridBtnObj.AddComponent<Shadow>();
+        gridShadow.effectColor = new Color(0.22f, 0.32f, 0.48f, 0.16f);
+        gridShadow.effectDistance = new Vector2(0f, -5f);
 
         RectTransform gRt = gridBtnObj.GetComponent<RectTransform>();
         gRt.anchorMin = new Vector2(0.5f, 0f);
         gRt.anchorMax = new Vector2(0.5f, 0f);
         gRt.pivot = new Vector2(0.5f, 0.5f);
-        gRt.anchoredPosition = new Vector2(310f, 185f);
-        gRt.sizeDelta = new Vector2(160f, 160f);
+        gRt.anchoredPosition = new Vector2(217f, 190f);
+        gRt.sizeDelta = new Vector2(116f, 116f);
 
-        gridBadgeText = CreateHudCountBadge(gridBtnObj.transform, "GridCountBadge", new Vector2(160f, 160f));
+        GameObject gridIconObject = new GameObject("GridGuideIcon");
+        gridIconObject.transform.SetParent(gridBtnObj.transform, false);
+        Image gridIcon = gridIconObject.AddComponent<Image>();
+        gridIcon.sprite = gridGuideButtonSprite;
+        gridIcon.preserveAspect = true;
+        gridIcon.raycastTarget = false;
+        gridIconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(80f, 80f);
+
+        gridBadgeText = CreateHudCountBadge(gridBtnObj.transform, "GridCountBadge", new Vector2(116f, 116f));
+        CreateBoosterLabel(gridBtnObj.transform, "GridGuideLabel", "Grid Guide", 148f);
 
         gridBtn.onClick.AddListener(() => { TriggerHaptic(false); UseGridGuide(); });
 
         CreateEraserIconButton(
-            canvasTr, "EraserButton", new Vector2(0f, 185f), new Vector2(160f, 160f),
+            canvasTr, "EraserButton", new Vector2(0f, 190f), new Vector2(116f, 116f),
             OnEraserButtonPressed, out eraserButtonBackground, out eraserBadgeText);
+        Transform eraserButton = canvasTr.Find("EraserButton");
+        if (eraserButton != null)
+            CreateBoosterLabel(eraserButton, "EraserLabel", "Eraser", 116f);
+
+        CreateSimpleBoosterButton(
+            canvasTr, "UndoBoosterButton", "Undo", UiIcon.Undo, new Vector2(-217f, 190f),
+            () => ShowHomeNotice("Undo", "Undo is not available in this version."));
+        CreateSimpleBoosterButton(
+            canvasTr, "ResetBoosterButton", "Reset", UiIcon.Reset, new Vector2(435f, 190f),
+            RestartCurrentRun, "1");
 
         Transform oldZoomBtn = canvasTr.Find("ResetZoomBtn");
         if (oldZoomBtn != null) Destroy(oldZoomBtn.gameObject);
@@ -883,22 +1071,26 @@ public class GameManager : MonoBehaviour
 
     void SetupLevelProgressBar(Transform canvasTr)
     {
-        Transform existing = canvasTr.Find("LevelProgressBar");
+        Transform parent = snakeCountPill != null ? snakeCountPill : canvasTr;
+        Transform oldRootProgress = canvasTr.Find("LevelProgressBar");
+        if (oldRootProgress != null) Destroy(oldRootProgress.gameObject);
+        Transform existing = parent.Find("LevelProgressBar");
         if (existing != null) Destroy(existing.gameObject);
 
         GameObject background = new GameObject("LevelProgressBar");
-        background.transform.SetParent(canvasTr, false);
+        background.transform.SetParent(parent, false);
+        background.transform.SetAsFirstSibling();
         Image backgroundImage = background.AddComponent<Image>();
         backgroundImage.sprite = pillSprite;
         backgroundImage.type = Image.Type.Sliced;
-        backgroundImage.color = new Color(0.84f, 0.88f, 0.94f, 1f);
+        backgroundImage.color = new Color(0.90f, 0.93f, 0.97f, 1f);
         backgroundImage.raycastTarget = false;
         RectTransform backgroundRect = background.GetComponent<RectTransform>();
-        backgroundRect.anchorMin = new Vector2(0f, 1f);
-        backgroundRect.anchorMax = new Vector2(0f, 1f);
+        backgroundRect.anchorMin = new Vector2(0.5f, 0.5f);
+        backgroundRect.anchorMax = new Vector2(0.5f, 0.5f);
         backgroundRect.pivot = new Vector2(0.5f, 0.5f);
-        backgroundRect.anchoredPosition = new Vector2(142f, -282f);
-        backgroundRect.sizeDelta = new Vector2(204f, 22f);
+        backgroundRect.anchoredPosition = new Vector2(125f, -23f);
+        backgroundRect.sizeDelta = new Vector2(96f, 9f);
 
         GameObject fill = new GameObject("Fill");
         fill.transform.SetParent(background.transform, false);
@@ -913,7 +1105,8 @@ public class GameManager : MonoBehaviour
         RectTransform fillRect = fill.GetComponent<RectTransform>();
         fillRect.anchorMin = Vector2.zero;
         fillRect.anchorMax = Vector2.one;
-        fillRect.sizeDelta = Vector2.zero;
+        fillRect.offsetMin = new Vector2(1f, 1f);
+        fillRect.offsetMax = new Vector2(-1f, -1f);
         fillRect.anchoredPosition = Vector2.zero;
     }
 
@@ -928,6 +1121,7 @@ public class GameManager : MonoBehaviour
     void UpdateCoinAndHintUI()
     {
         if (homeCoinText != null) homeCoinText.text = playerCoins.ToString();
+        if (challengeCoinText != null) challengeCoinText.text = playerCoins.ToString();
         if (hintBadgeText != null)
             hintBadgeText.text = remainingHints > 0 ? remainingHints.ToString() : "+";
         if (gridBadgeText != null)
@@ -940,7 +1134,7 @@ public class GameManager : MonoBehaviour
         if (timerText == null) return;
         int mins = Mathf.FloorToInt(timeRemaining / 60f);
         int secs = Mathf.FloorToInt(timeRemaining % 60f);
-        timerText.text = string.Format("⏱ {0:00}:{1:00}", mins, secs);
+        timerText.text = string.Format("{0:00}:{1:00}", mins, secs);
     }
 
     // Helper: Creates a Yellow & Light-Yellow Sunburst Popup Card (Point 11!)
@@ -1051,7 +1245,7 @@ public class GameManager : MonoBehaviour
         {
             TriggerHaptic(false);
             TogglePause();
-            if (isChallengeMode) StartChallengeGameplay(false);
+            if (isChallengeMode) StartChallengeGameplay(false, activeChallengeMode);
             else LoadLevel(currentLevel);
         });
 
@@ -1236,7 +1430,7 @@ public class GameManager : MonoBehaviour
         {
             TriggerHaptic(false);
             winModalObj.SetActive(false);
-            if (isChallengeMode) OpenDailyChallengeEntryModal();
+            if (isChallengeMode) RequestChallengeRun(activeChallengeMode);
             else NextLevel();
         });
 
@@ -1335,7 +1529,7 @@ public class GameManager : MonoBehaviour
         {
             gameOverModalObj.SetActive(false);
             isPaused = false;
-            if (isChallengeMode) StartChallengeGameplay(false);
+            if (isChallengeMode) StartChallengeGameplay(false, activeChallengeMode);
             else LoadLevel(currentLevel);
         });
 
@@ -1558,7 +1752,7 @@ public class GameManager : MonoBehaviour
     }
 
     // Point 2: Home Screen Layout Order:
-    // Top Center Coins Wallet -> Top/Bottom Corner Settings Button -> "Snake Puzzle" Heading -> Center 2 Cards -> Continue Game -> Restart Game!
+    // Builds the active legacy home dashboard and its responsive bottom navigation.
     void BuildHomeScreen(Transform canvasTr)
     {
         Transform existing = canvasTr.Find("HomeScreen");
@@ -1566,208 +1760,1171 @@ public class GameManager : MonoBehaviour
 
         homeScreenObj = new GameObject("HomeScreen");
         homeScreenObj.transform.SetParent(canvasTr, false);
-
         Image bg = homeScreenObj.AddComponent<Image>();
-        bg.color = new Color(0.965f, 0.978f, 0.996f, 1.0f);
+        bg.color = Color.white;
+        bg.raycastTarget = true;
         RectTransform rt = homeScreenObj.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        // 1. Top Center Coins Wallet Pill
-        GameObject walletObj = new GameObject("HomeCoinPill");
-        walletObj.transform.SetParent(homeScreenObj.transform, false);
-        Image wBg = walletObj.AddComponent<Image>();
-        wBg.sprite = pillSprite;
-        wBg.type = Image.Type.Sliced;
-        wBg.color = Color.white;
-        Shadow wSh = walletObj.AddComponent<Shadow>();
-        wSh.effectColor = new Color(0.05f, 0.12f, 0.28f, 0.12f);
-        wSh.effectDistance = new Vector2(0f, -6f);
-        RectTransform wRt = walletObj.GetComponent<RectTransform>();
-        wRt.anchorMin = new Vector2(0.5f, 1f);
-        wRt.anchorMax = new Vector2(0.5f, 1f);
-        wRt.anchoredPosition = new Vector2(0f, -125f);
-        wRt.sizeDelta = new Vector2(310f, 92f);
+        CreateCoinWallet(homeScreenObj.transform, "HomeCoinPill", new Vector2(0f, 1f), new Vector2(215f, -145f), new Vector2(360f, 92f), out homeCoinText);
 
-        GameObject cIcon = new GameObject("CoinIcon");
-        cIcon.transform.SetParent(walletObj.transform, false);
-        Image ciImg = cIcon.AddComponent<Image>();
-        ciImg.sprite = goldCoinSprite;
-        RectTransform ciRt = cIcon.GetComponent<RectTransform>();
-        ciRt.anchoredPosition = new Vector2(-95f, 0f);
-        ciRt.sizeDelta = new Vector2(62f, 62f);
-
-        GameObject cTxt = new GameObject("CoinText");
-        cTxt.transform.SetParent(walletObj.transform, false);
-        homeCoinText = cTxt.AddComponent<TextMeshProUGUI>();
-        StyleBoldTMP(homeCoinText, 44f, new Color(0.05f, 0.08f, 0.15f));
-        RectTransform ctRt = cTxt.GetComponent<RectTransform>();
-        ctRt.anchoredPosition = Vector2.zero;
-        ctRt.sizeDelta = new Vector2(160f, 80f);
-
-        GameObject plusCircle = new GameObject("PlusBadge");
-        plusCircle.transform.SetParent(walletObj.transform, false);
-        Image pcImg = plusCircle.AddComponent<Image>();
-        pcImg.sprite = circleSprite;
-        pcImg.color = new Color(0.14f, 0.52f, 0.98f);
-        RectTransform pcRt = plusCircle.GetComponent<RectTransform>();
-        pcRt.anchoredPosition = new Vector2(102f, 0f);
-        pcRt.sizeDelta = new Vector2(58f, 58f);
-
-        GameObject pcTxt = new GameObject("PlusText");
-        pcTxt.transform.SetParent(plusCircle.transform, false);
-        TextMeshProUGUI pct = pcTxt.AddComponent<TextMeshProUGUI>();
-        pct.text = "+";
-        StyleBoldTMP(pct, 38f, Color.white);
-        pcTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(58f, 58f);
-
-        // Single Settings button on the home page.
-        GameObject topSetBtn = new GameObject("HomeTopSettingsBtn");
-        topSetBtn.transform.SetParent(homeScreenObj.transform, false);
-        Button tsB = topSetBtn.AddComponent<Button>();
-        Image tsI = topSetBtn.AddComponent<Image>();
-        tsI.sprite = gearIconSprite;
-        tsI.preserveAspect = true;
-        RectTransform tsRt = topSetBtn.GetComponent<RectTransform>();
-        tsRt.anchorMin = new Vector2(1f, 1f);
-        tsRt.anchorMax = new Vector2(1f, 1f);
-        tsRt.anchoredPosition = new Vector2(-92f, -125f);
-        tsRt.sizeDelta = new Vector2(84f, 84f);
-        tsB.onClick.AddListener(() => { TriggerHaptic(false); OpenSettingsModal(); });
-
-        // 2. Below Coins Wallet: "Snake Puzzle" Main Heading!
-        GameObject titleObj = new GameObject("GameTitle");
-        titleObj.transform.SetParent(homeScreenObj.transform, false);
-        TextMeshProUGUI titleTmp = titleObj.AddComponent<TextMeshProUGUI>();
-        titleTmp.text = "Snake Puzzle";
-        StyleBoldTMP(titleTmp, 80f, new Color(0.10f, 0.16f, 0.26f));
-        RectTransform titleRt = titleObj.GetComponent<RectTransform>();
-        titleRt.anchoredPosition = new Vector2(0f, 560f);
-        titleRt.sizeDelta = new Vector2(900f, 115f);
-
-        // 3. Center: Two Feature Cards (Daily Challenge & Play With Friends)
-        System.DateTime today = System.DateTime.Now;
-        string realDateStr = today.ToString("MMMM d");
-
-        GameObject leftCard = CreateHomeFeatureCard(
-            homeScreenObj.transform,
-            "DailyChallengeCard",
-            new Vector2(-245f, 120f),
-            new Vector2(450f, 560f),
-            new Color(0.36f, 0.72f, 0.99f),
-            new Color(0.06f, 0.48f, 0.96f),
-            calendarBadgeSprite,
-            "CHALLENGE",
-            realDateStr,
-            "Play"
-        );
-        leftCard.GetComponent<Button>().onClick.AddListener(() => { TriggerHaptic(false); OpenDailyChallengeEntryModal(); });
-
-        GameObject rightCard = CreateHomeFeatureCard(
-            homeScreenObj.transform,
-            "MultiplayerFriendsCard",
-            new Vector2(245f, 120f),
-            new Vector2(450f, 560f),
-            new Color(0.99f, 0.68f, 0.28f),
-            new Color(0.86f, 0.38f, 0.06f),
-            friendsTrophySprite,
-            "ARENA CLASH",
-            "Play With Friends",
-            "Play"
-        );
-        rightCard.GetComponent<Button>().onClick.AddListener(() => { TriggerHaptic(false); OpenMultiplayerComingSoonModal(); });
-
-        // 4. Below Cards: Continue Game & Restart Game Buttons
-        GameObject contBtn = CreatePillButton(homeScreenObj.transform, "ContinueGameBtn", $"Continue Game\n<size=34>Level {currentLevel}</size>", new Color(0.18f, 0.56f, 0.98f), Color.white, new Vector2(0f, -330f), new Vector2(780f, 155f), 44f, false);
-        homeContinueBtnText = contBtn.GetComponentInChildren<TextMeshProUGUI>();
-        contBtn.GetComponent<Button>().onClick.AddListener(() =>
+        GameObject settingsButton = CreateIconPod(
+            homeScreenObj.transform, "HomeSettingsButton", new Vector2(1f, 1f),
+            new Vector2(-100f, -145f), new Vector2(88f, 88f), gearIconSprite,
+            new Color(0.12f, 0.19f, 0.30f));
+        settingsButton.GetComponent<Button>().onClick.AddListener(() =>
         {
             TriggerHaptic(false);
-            homeScreenObj.SetActive(false);
-            isChallengeMode = false;
-            isPaused = false;
-            LoadLevel(currentLevel);
+            OpenSettingsModal();
         });
 
-        GameObject restGameBtn = CreatePillButton(homeScreenObj.transform, "RestartGameBtn", "Restart Game", Color.white, new Color(0.18f, 0.56f, 0.98f), new Vector2(0f, -510f), new Vector2(780f, 130f), 42f, false);
-        restGameBtn.GetComponent<Button>().onClick.AddListener(() =>
+        GameObject challengeCard = CreateHomeFeatureCard(
+            homeScreenObj.transform, "ChallengeFeatureCard", -245f, "SOLO MODE", "Challenge", "Speed Run",
+            new Color(0.22f, 0.74f, 0.97f), new Color(0.15f, 0.39f, 0.92f), new Color(0.12f, 0.25f, 0.69f),
+            friendsTrophySprite, true);
+        challengeCard.GetComponent<Button>().onClick.AddListener(() =>
         {
             TriggerHaptic(false);
-            homeScreenObj.SetActive(false);
-            isChallengeMode = false;
-            isPaused = false;
-            LoadLevel(currentLevel);
+            OpenChallengesScreen();
         });
+
+        GameObject friendsCard = CreateHomeFeatureCard(
+            homeScreenObj.transform, "PlayFriendsFeatureCard", 245f, "2 PLAYERS", "Play Friends", "Invite",
+            new Color(0.98f, 0.44f, 0.55f), new Color(0.88f, 0.11f, 0.28f), new Color(0.62f, 0.07f, 0.22f),
+            GetOrCreateUiIconSprite(UiIcon.Users), false);
+        friendsCard.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            TriggerHaptic(false);
+            OpenMultiplayerComingSoonModal();
+        });
+
+        CreateHomeFloatingBadge(homeScreenObj.transform, "FreeGiftBadge", false, UiIcon.Gift, "FREE", "Free Gift", 0,
+            () => ShowHomeNotice("Free Gift", "Your next free gift will be available soon."));
+        CreateHomeFloatingBadge(homeScreenObj.transform, "NextMilestoneBadge", true, UiIcon.Lock, string.Empty, "Unlock", GetNextMilestoneLevel(),
+            OpenChallengesScreen);
+
+        GameObject titleObject = new GameObject("GameTitle");
+        titleObject.transform.SetParent(homeScreenObj.transform, false);
+        TextMeshProUGUI title = titleObject.AddComponent<TextMeshProUGUI>();
+        title.text = "Snake Puzzle";
+        StyleBoldTMP(title, 82f, new Color(0.16f, 0.21f, 0.31f));
+        RectTransform titleRect = titleObject.GetComponent<RectTransform>();
+        titleRect.anchorMin = new Vector2(0.5f, 0.5f);
+        titleRect.anchorMax = new Vector2(0.5f, 0.5f);
+        titleRect.anchoredPosition = new Vector2(0f, -205f);
+        titleRect.sizeDelta = new Vector2(920f, 125f);
+
+        GameObject playButtonShadow = new GameObject("PlayButtonShadow");
+        playButtonShadow.transform.SetParent(homeScreenObj.transform, false);
+        RectTransform playShadowRect = playButtonShadow.GetComponent<RectTransform>();
+        playShadowRect.anchorMin = new Vector2(0.5f, 0f);
+        playShadowRect.anchorMax = new Vector2(0.5f, 0f);
+        playShadowRect.anchoredPosition = new Vector2(0f, 330f);
+        playShadowRect.sizeDelta = new Vector2(900f, 172f);
+
+        Image playLip = playButtonShadow.AddComponent<Image>();
+        playLip.sprite = pillSprite;
+        playLip.type = Image.Type.Sliced;
+        playLip.color = new Color(0.12f, 0.23f, 0.55f);
+        Shadow playShadow = playButtonShadow.AddComponent<Shadow>();
+        playShadow.effectColor = new Color(0.12f, 0.30f, 0.74f, 0.24f);
+        playShadow.effectDistance = new Vector2(0f, -12f);
+
+        GameObject playButton = new GameObject("HomePlayButton");
+        playButton.transform.SetParent(playButtonShadow.transform, false);
+        Button playButtonComponent = playButton.AddComponent<Button>();
+        Image playImage = playButton.AddComponent<Image>();
+        playImage.sprite = CreateHomePlayButtonSprite(900, 154);
+        playImage.color = Color.white;
+        RectTransform playRect = playButton.GetComponent<RectTransform>();
+        playRect.anchorMin = new Vector2(0.5f, 0.5f);
+        playRect.anchorMax = new Vector2(0.5f, 0.5f);
+        playRect.anchoredPosition = new Vector2(0f, 7f);
+        playRect.sizeDelta = new Vector2(900f, 154f);
+        homePlayButtonRect = playRect;
+        playButton.AddComponent<RectMask2D>();
+        playButtonComponent.onClick.AddListener(StartCampaignFromHome);
+
+        Image shimmer = new GameObject("PlayShimmer").AddComponent<Image>();
+        shimmer.transform.SetParent(playButton.transform, false);
+        shimmer.sprite = CreatePlayShimmerSprite(128, 128);
+        shimmer.raycastTarget = false;
+        homeShimmerRect = shimmer.rectTransform;
+        homeShimmerRect.anchorMin = new Vector2(0.5f, 0.5f);
+        homeShimmerRect.anchorMax = new Vector2(0.5f, 0.5f);
+        homeShimmerRect.sizeDelta = new Vector2(130f, 190f);
+
+        TextMeshProUGUI playText = CreateHomeText(playButton.transform, "PlayText", "PLAY", 62f, Color.white, new Vector2(0f, 20f), new Vector2(820f, 76f));
+        playText.fontStyle = FontStyles.Bold;
+        homePlayLevelText = CreateHomeText(playButton.transform, "PlayLevelText", $"Level {currentLevel}", 32f, new Color(0.86f, 0.93f, 1f), new Vector2(0f, -43f), new Vector2(820f, 42f));
+
+        BuildHomeBottomNavigation(homeScreenObj.transform);
 
         homeScreenObj.SetActive(false);
     }
 
-    GameObject CreateHomeFeatureCard(Transform parent, string name, Vector2 pos, Vector2 size, Color topCol, Color botCol, Sprite iconSp, string subtitle, string mainTitle, string btnText)
+    GameObject CreateHomeFeatureCard(
+        Transform parent,
+        string name,
+        float xPosition,
+        string tag,
+        string title,
+        string subtitle,
+        Color topColor,
+        Color middleColor,
+        Color bottomColor,
+        Sprite iconSprite,
+        bool tighterTopLeft)
     {
         GameObject cardObj = new GameObject(name);
         cardObj.transform.SetParent(parent, false);
-        cardObj.AddComponent<Button>();
+        Button button = cardObj.AddComponent<Button>();
         Image cardImg = cardObj.AddComponent<Image>();
-        cardImg.sprite = CreateVerticalGradientCardSprite(256, 320, 44f, topCol, botCol);
+        cardImg.sprite = CreateHomeFeatureCardSprite(480, 480, topColor, middleColor, bottomColor, tighterTopLeft);
         cardImg.color = Color.white;
+        cardImg.type = Image.Type.Simple;
 
         Shadow sh = cardObj.AddComponent<Shadow>();
-        sh.effectColor = new Color(0.04f, 0.10f, 0.24f, 0.18f);
-        sh.effectDistance = new Vector2(0f, -12f);
+        sh.effectColor = new Color(0.10f, 0.20f, 0.39f, 0.20f);
+        sh.effectDistance = new Vector2(0f, -10f);
 
         RectTransform rt = cardObj.GetComponent<RectTransform>();
-        rt.anchoredPosition = pos;
-        rt.sizeDelta = size;
+        rt.anchorMin = new Vector2(0.5f, 1f);
+        rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
+        rt.anchoredPosition = new Vector2(xPosition, -485f);
+        rt.sizeDelta = new Vector2(458f, 470f);
 
-        GameObject icObj = new GameObject("CardIcon");
-        icObj.transform.SetParent(cardObj.transform, false);
-        Image icImg = icObj.AddComponent<Image>();
-        icImg.sprite = iconSp;
-        icImg.preserveAspect = true;
-        RectTransform icRt = icObj.GetComponent<RectTransform>();
-        icRt.anchoredPosition = new Vector2(0f, 135f);
-        icRt.sizeDelta = new Vector2(130f, 130f);
+        GameObject watermark = new GameObject("WatermarkIcon");
+        watermark.transform.SetParent(cardObj.transform, false);
+        Image watermarkImage = watermark.AddComponent<Image>();
+        watermarkImage.sprite = iconSprite;
+        watermarkImage.color = new Color(1f, 1f, 1f, 0.10f);
+        watermarkImage.preserveAspect = true;
+        watermarkImage.raycastTarget = false;
+        RectTransform watermarkRect = watermark.GetComponent<RectTransform>();
+        watermarkRect.anchorMin = new Vector2(1f, 0f);
+        watermarkRect.anchorMax = new Vector2(1f, 0f);
+        watermarkRect.pivot = new Vector2(1f, 0f);
+        watermarkRect.anchoredPosition = new Vector2(26f, -12f);
+        watermarkRect.sizeDelta = new Vector2(210f, 210f);
 
-        GameObject subObj = new GameObject("Subtitle");
-        subObj.transform.SetParent(cardObj.transform, false);
-        TextMeshProUGUI subTmp = subObj.AddComponent<TextMeshProUGUI>();
-        subTmp.text = subtitle;
-        StyleBoldTMP(subTmp, 26f, new Color(1f, 1f, 1f, 0.88f));
-        RectTransform subRt = subObj.GetComponent<RectTransform>();
-        subRt.anchoredPosition = new Vector2(0f, 20f);
-        subRt.sizeDelta = new Vector2(410f, 45f);
+        GameObject glassBadge = new GameObject("GlassIconBadge");
+        glassBadge.transform.SetParent(cardObj.transform, false);
+        Image glassImage = glassBadge.AddComponent<Image>();
+        glassImage.sprite = circleSprite;
+        glassImage.color = new Color(1f, 1f, 1f, 0.25f);
+        Outline glassOutline = glassBadge.AddComponent<Outline>();
+        glassOutline.effectColor = new Color(1f, 1f, 1f, 0.36f);
+        glassOutline.effectDistance = new Vector2(1f, -1f);
+        RectTransform glassRect = glassBadge.GetComponent<RectTransform>();
+        glassRect.anchorMin = new Vector2(0f, 1f);
+        glassRect.anchorMax = new Vector2(0f, 1f);
+        glassRect.pivot = new Vector2(0f, 1f);
+        glassRect.anchoredPosition = new Vector2(28f, -28f);
+        glassRect.sizeDelta = new Vector2(108f, 108f);
 
-        GameObject mainObj = new GameObject("MainTitle");
-        mainObj.transform.SetParent(cardObj.transform, false);
-        TextMeshProUGUI mainTmp = mainObj.AddComponent<TextMeshProUGUI>();
-        mainTmp.text = mainTitle;
-        StyleBoldTMP(mainTmp, 42f, Color.white);
-        RectTransform mainRt = mainObj.GetComponent<RectTransform>();
-        mainRt.anchoredPosition = new Vector2(0f, -45f);
-        mainRt.sizeDelta = new Vector2(420f, 65f);
+        GameObject iconObject = new GameObject("CardIcon");
+        iconObject.transform.SetParent(glassBadge.transform, false);
+        Image icon = iconObject.AddComponent<Image>();
+        icon.sprite = iconSprite;
+        icon.color = Color.white;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        iconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 60f);
 
-        GameObject playPill = new GameObject("PlayPill");
-        playPill.transform.SetParent(cardObj.transform, false);
-        Image ppImg = playPill.AddComponent<Image>();
-        ppImg.sprite = pillSprite;
-        ppImg.type = Image.Type.Sliced;
-        ppImg.color = new Color(1f, 1f, 1f, 0.28f);
-        RectTransform ppRt = playPill.GetComponent<RectTransform>();
-        ppRt.anchoredPosition = new Vector2(0f, -165f);
-        ppRt.sizeDelta = new Vector2(260f, 86f);
+        GameObject tagPill = new GameObject("ModeTag");
+        tagPill.transform.SetParent(cardObj.transform, false);
+        Image tagBackground = tagPill.AddComponent<Image>();
+        tagBackground.sprite = pillSprite;
+        tagBackground.type = Image.Type.Sliced;
+        tagBackground.color = new Color(1f, 1f, 1f, 0.20f);
+        RectTransform tagRect = tagPill.GetComponent<RectTransform>();
+        tagRect.anchorMin = new Vector2(0f, 0f);
+        tagRect.anchorMax = new Vector2(0f, 0f);
+        tagRect.pivot = new Vector2(0f, 0f);
+        tagRect.anchoredPosition = new Vector2(28f, 235f);
+        tagRect.sizeDelta = new Vector2(166f, 42f);
+        TextMeshProUGUI tagText = CreateHomeText(tagPill.transform, "TagText", tag, 21f, Color.white, Vector2.zero, new Vector2(160f, 40f));
+        tagText.fontStyle = FontStyles.Bold;
 
-        GameObject ppTxt = new GameObject("PlayText");
-        ppTxt.transform.SetParent(playPill.transform, false);
-        TextMeshProUGUI ppt = ppTxt.AddComponent<TextMeshProUGUI>();
-        ppt.text = btnText;
-        StyleBoldTMP(ppt, 38f, Color.white);
-        RectTransform pptRt = ppTxt.GetComponent<RectTransform>();
-        pptRt.anchorMin = Vector2.zero;
-        pptRt.anchorMax = Vector2.one;
-        pptRt.sizeDelta = Vector2.zero;
+        CreateHomeText(cardObj.transform, "CardTitle", title, title == "Play Friends" ? 43f : 48f,
+            Color.white, new Vector2(0f, -45f), new Vector2(420f, 62f)).fontStyle = FontStyles.Bold;
+        CreateHomeText(cardObj.transform, "CardSubtitle", subtitle, 28f, new Color(1f, 1f, 1f, 0.88f),
+            new Vector2(0f, -98f), new Vector2(420f, 44f));
+
+        button.transition = Selectable.Transition.ColorTint;
 
         return cardObj;
+    }
+
+    void CreateCoinWallet(
+        Transform parent,
+        string objectName,
+        Vector2 anchor,
+        Vector2 position,
+        Vector2 size,
+        out TextMeshProUGUI countText)
+    {
+        GameObject wallet = new GameObject(objectName);
+        wallet.transform.SetParent(parent, false);
+        Image background = wallet.AddComponent<Image>();
+        background.sprite = pillSprite;
+        background.type = Image.Type.Sliced;
+        background.color = Color.white;
+        Outline outline = wallet.AddComponent<Outline>();
+        outline.effectColor = new Color(0.88f, 0.91f, 0.95f, 1f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        Shadow shadow = wallet.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.10f, 0.17f, 0.28f, 0.07f);
+        shadow.effectDistance = new Vector2(0f, -4f);
+
+        RectTransform walletRect = wallet.GetComponent<RectTransform>();
+        walletRect.anchorMin = anchor;
+        walletRect.anchorMax = anchor;
+        walletRect.pivot = new Vector2(0.5f, 0.5f);
+        walletRect.anchoredPosition = position;
+        walletRect.sizeDelta = size;
+
+        GameObject coinObject = new GameObject("CoinIcon");
+        coinObject.transform.SetParent(wallet.transform, false);
+        Image coinImage = coinObject.AddComponent<Image>();
+        coinImage.sprite = goldCoinSprite;
+        coinImage.preserveAspect = true;
+        coinImage.raycastTarget = false;
+        RectTransform coinRect = coinObject.GetComponent<RectTransform>();
+        coinRect.anchorMin = new Vector2(0f, 0.5f);
+        coinRect.anchorMax = new Vector2(0f, 0.5f);
+        coinRect.pivot = new Vector2(0.5f, 0.5f);
+        coinRect.anchoredPosition = new Vector2(47f, 0f);
+        coinRect.sizeDelta = new Vector2(58f, 58f);
+
+        GameObject countObject = new GameObject("CoinCount");
+        countObject.transform.SetParent(wallet.transform, false);
+        countText = countObject.AddComponent<TextMeshProUGUI>();
+        countText.text = playerCoins.ToString();
+        StyleBoldTMP(countText, 38f, new Color(0.12f, 0.17f, 0.25f));
+        RectTransform countRect = countObject.GetComponent<RectTransform>();
+        countRect.anchorMin = new Vector2(0.5f, 0.5f);
+        countRect.anchorMax = new Vector2(0.5f, 0.5f);
+        countRect.anchoredPosition = new Vector2(8f, 0f);
+        countRect.sizeDelta = new Vector2(150f, 68f);
+
+        GameObject plusObject = new GameObject("AddCoinsButton");
+        plusObject.transform.SetParent(wallet.transform, false);
+        Button plusButton = plusObject.AddComponent<Button>();
+        Image plusBackground = plusObject.AddComponent<Image>();
+        plusBackground.sprite = circleSprite;
+        plusBackground.color = new Color(0.06f, 0.09f, 0.15f);
+        RectTransform plusRect = plusObject.GetComponent<RectTransform>();
+        plusRect.anchorMin = new Vector2(1f, 0.5f);
+        plusRect.anchorMax = new Vector2(1f, 0.5f);
+        plusRect.pivot = new Vector2(0.5f, 0.5f);
+        plusRect.anchoredPosition = new Vector2(-43f, 0f);
+        plusRect.sizeDelta = new Vector2(50f, 50f);
+        TextMeshProUGUI plusText = CreateHomeText(plusObject.transform, "PlusText", "+", 34f, Color.white, Vector2.zero, new Vector2(48f, 48f));
+        plusText.fontStyle = FontStyles.Bold;
+        plusButton.onClick.AddListener(() => ShowHomeNotice("Coins", "Coin purchases are not available yet."));
+    }
+
+    GameObject CreateIconPod(
+        Transform parent,
+        string objectName,
+        Vector2 anchor,
+        Vector2 position,
+        Vector2 size,
+        Sprite icon,
+        Color iconColor)
+    {
+        GameObject pod = new GameObject(objectName);
+        pod.transform.SetParent(parent, false);
+        Button button = pod.AddComponent<Button>();
+        Image background = pod.AddComponent<Image>();
+        background.sprite = circleSprite;
+        background.color = Color.white;
+        Outline outline = pod.AddComponent<Outline>();
+        outline.effectColor = new Color(0.88f, 0.91f, 0.95f, 1f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        Shadow shadow = pod.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.12f, 0.20f, 0.32f, 0.11f);
+        shadow.effectDistance = new Vector2(0f, -4f);
+        RectTransform rect = pod.GetComponent<RectTransform>();
+        rect.anchorMin = anchor;
+        rect.anchorMax = anchor;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+
+        GameObject iconObject = new GameObject("Icon");
+        iconObject.transform.SetParent(pod.transform, false);
+        Image iconImage = iconObject.AddComponent<Image>();
+        iconImage.sprite = icon;
+        iconImage.color = iconColor;
+        iconImage.preserveAspect = true;
+        iconImage.raycastTarget = false;
+        iconObject.GetComponent<RectTransform>().sizeDelta = size * 0.52f;
+        button.targetGraphic = background;
+        return pod;
+    }
+
+    void CreateHomeFloatingBadge(
+        Transform parent,
+        string objectName,
+        bool rightSide,
+        UiIcon icon,
+        string badgeText,
+        string label,
+        int milestone,
+        System.Action onClick)
+    {
+        GameObject group = new GameObject(objectName);
+        group.transform.SetParent(parent, false);
+        RectTransform groupRect = group.GetComponent<RectTransform>();
+        groupRect.anchorMin = new Vector2(rightSide ? 1f : 0f, 0.5f);
+        groupRect.anchorMax = groupRect.anchorMin;
+        groupRect.pivot = new Vector2(0.5f, 0.5f);
+        groupRect.anchoredPosition = new Vector2(rightSide ? -128f : 128f, 10f);
+        groupRect.sizeDelta = new Vector2(176f, 190f);
+
+        Color badgeColor = rightSide
+            ? new Color(0.42f, 0.27f, 0.84f)
+            : new Color(0.98f, 0.68f, 0.17f);
+        GameObject actionButton = new GameObject("ActionButton");
+        actionButton.transform.SetParent(group.transform, false);
+        Button button = actionButton.AddComponent<Button>();
+        Image background = actionButton.AddComponent<Image>();
+        background.sprite = circleSprite;
+        background.color = badgeColor;
+        Outline border = actionButton.AddComponent<Outline>();
+        border.effectColor = Color.white;
+        border.effectDistance = new Vector2(3f, -3f);
+        Shadow shadow = actionButton.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.10f, 0.17f, 0.28f, 0.16f);
+        shadow.effectDistance = new Vector2(0f, -5f);
+        RectTransform buttonRect = actionButton.GetComponent<RectTransform>();
+        buttonRect.anchorMin = new Vector2(0.5f, 1f);
+        buttonRect.anchorMax = new Vector2(0.5f, 1f);
+        buttonRect.anchoredPosition = new Vector2(0f, -78f);
+        buttonRect.sizeDelta = new Vector2(132f, 132f);
+
+        GameObject iconObject = new GameObject("ActionIcon");
+        iconObject.transform.SetParent(actionButton.transform, false);
+        Image iconImage = iconObject.AddComponent<Image>();
+        iconImage.sprite = GetOrCreateUiIconSprite(icon);
+        iconImage.color = Color.white;
+        iconImage.preserveAspect = true;
+        iconImage.raycastTarget = false;
+        iconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(60f, 60f);
+
+        string dynamicBadge = rightSide ? $"LVL {milestone}" : badgeText;
+        if (!string.IsNullOrEmpty(dynamicBadge))
+        {
+            GameObject badgeObject = new GameObject("ActionBadge");
+            badgeObject.transform.SetParent(actionButton.transform, false);
+            Image badgeBackground = badgeObject.AddComponent<Image>();
+            badgeBackground.sprite = pillSprite;
+            badgeBackground.type = Image.Type.Sliced;
+            badgeBackground.color = rightSide ? new Color(1f, 0.75f, 0.18f) : new Color(0.90f, 0.12f, 0.25f);
+            RectTransform badgeRect = badgeObject.GetComponent<RectTransform>();
+            badgeRect.anchorMin = new Vector2(1f, 1f);
+            badgeRect.anchorMax = new Vector2(1f, 1f);
+            badgeRect.pivot = new Vector2(0.5f, 0.5f);
+            badgeRect.anchoredPosition = new Vector2(-2f, -4f);
+            badgeRect.sizeDelta = new Vector2(rightSide ? 92f : 76f, 34f);
+            TextMeshProUGUI badgeLabel = CreateHomeText(
+                badgeObject.transform, "BadgeText", dynamicBadge, 18f,
+                rightSide ? new Color(0.13f, 0.16f, 0.22f) : Color.white, Vector2.zero,
+                new Vector2(rightSide ? 88f : 72f, 32f));
+            badgeLabel.fontStyle = FontStyles.Bold;
+            if (rightSide)
+                homeMilestoneBadgeText = badgeLabel;
+        }
+
+        GameObject labelPill = new GameObject("ActionLabelPill");
+        labelPill.transform.SetParent(group.transform, false);
+        Image labelBackground = labelPill.AddComponent<Image>();
+        labelBackground.sprite = pillSprite;
+        labelBackground.type = Image.Type.Sliced;
+        labelBackground.color = rightSide ? new Color(0.42f, 0.27f, 0.84f) : new Color(0.16f, 0.39f, 0.86f);
+        labelBackground.raycastTarget = false;
+        RectTransform labelRect = labelPill.GetComponent<RectTransform>();
+        labelRect.anchorMin = new Vector2(0.5f, 1f);
+        labelRect.anchorMax = new Vector2(0.5f, 1f);
+        labelRect.anchoredPosition = new Vector2(0f, -165f);
+        labelRect.sizeDelta = new Vector2(154f, 36f);
+        CreateHomeText(labelPill.transform, "ActionLabel", label, 21f, Color.white, Vector2.zero, new Vector2(150f, 34f));
+
+        button.onClick.AddListener(() =>
+        {
+            TriggerHaptic(false);
+            onClick?.Invoke();
+        });
+    }
+
+    void BuildHomeBottomNavigation(Transform parent)
+    {
+        GameObject navigation = new GameObject("HomeBottomNavigation");
+        navigation.transform.SetParent(parent, false);
+        Image background = navigation.AddComponent<Image>();
+        background.color = Color.white;
+        Shadow shadow = navigation.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.12f, 0.18f, 0.28f, 0.08f);
+        shadow.effectDistance = new Vector2(0f, 8f);
+        RectTransform rect = navigation.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.sizeDelta = new Vector2(0f, 170f);
+
+        CreateHomeNavTab(navigation.transform, "HomeTab", 0.125f, UiIcon.Home, "Home",
+            new Color(0.16f, 0.42f, 0.92f), false, () => { });
+        CreateHomeNavTab(navigation.transform, "LevelTab", 0.375f, UiIcon.Lock, "Level 25",
+            new Color(0.45f, 0.29f, 0.80f), true, OpenChallengesScreen);
+        CreateHomeNavTab(navigation.transform, "DailyTab", 0.625f, UiIcon.Clock, "Daily",
+            new Color(0.92f, 0.57f, 0.10f), true, OpenDailyChallengeEntryModal, true);
+        CreateHomeNavTab(navigation.transform, "MeTab", 0.875f, UiIcon.User, "Me",
+            new Color(0.18f, 0.44f, 0.88f), true, OpenSettingsModal);
+    }
+
+    void CreateHomeNavTab(
+        Transform parent,
+        string name,
+        float anchorX,
+        UiIcon icon,
+        string label,
+        Color color,
+        bool useDisc,
+        System.Action onClick,
+        bool showNotification = false)
+    {
+        GameObject tab = new GameObject(name);
+        tab.transform.SetParent(parent, false);
+        Button button = tab.AddComponent<Button>();
+        Image hitArea = tab.AddComponent<Image>();
+        hitArea.color = new Color(1f, 1f, 1f, 0f);
+        RectTransform tabRect = tab.GetComponent<RectTransform>();
+        tabRect.anchorMin = new Vector2(anchorX, 0.5f);
+        tabRect.anchorMax = tabRect.anchorMin;
+        tabRect.anchoredPosition = Vector2.zero;
+        tabRect.sizeDelta = new Vector2(140f, 138f);
+
+        Transform iconParent = tab.transform;
+        if (useDisc)
+        {
+            GameObject disc = new GameObject("IconDisc");
+            disc.transform.SetParent(tab.transform, false);
+            Image discImage = disc.AddComponent<Image>();
+            discImage.sprite = circleSprite;
+            discImage.color = icon == UiIcon.Clock
+                ? new Color(1f, 0.96f, 0.86f)
+                : icon == UiIcon.Lock
+                    ? new Color(0.96f, 0.93f, 1f)
+                    : new Color(0.91f, 0.95f, 1f);
+            RectTransform discRect = disc.GetComponent<RectTransform>();
+            discRect.anchorMin = new Vector2(0.5f, 1f);
+            discRect.anchorMax = new Vector2(0.5f, 1f);
+            discRect.anchoredPosition = new Vector2(0f, -34f);
+            discRect.sizeDelta = new Vector2(58f, 58f);
+            iconParent = disc.transform;
+        }
+
+        GameObject iconObject = new GameObject("Icon");
+        iconObject.transform.SetParent(iconParent, false);
+        Image iconImage = iconObject.AddComponent<Image>();
+        iconImage.sprite = icon == UiIcon.Clock ? goldCoinSprite : GetOrCreateUiIconSprite(icon);
+        iconImage.color = color;
+        iconImage.preserveAspect = true;
+        iconImage.raycastTarget = false;
+        RectTransform iconRect = iconObject.GetComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0.5f, 1f);
+        iconRect.anchorMax = new Vector2(0.5f, 1f);
+        iconRect.anchoredPosition = new Vector2(0f, -34f);
+        iconRect.sizeDelta = useDisc ? new Vector2(34f, 34f) : new Vector2(50f, 50f);
+
+        if (showNotification)
+        {
+            GameObject notification = new GameObject("NotificationDot");
+            notification.transform.SetParent(iconParent, false);
+            Image dot = notification.AddComponent<Image>();
+            dot.sprite = circleSprite;
+            dot.color = new Color(0.93f, 0.19f, 0.27f);
+            RectTransform dotRect = notification.GetComponent<RectTransform>();
+            dotRect.anchorMin = new Vector2(1f, 1f);
+            dotRect.anchorMax = new Vector2(1f, 1f);
+            dotRect.anchoredPosition = new Vector2(-5f, -4f);
+            dotRect.sizeDelta = new Vector2(16f, 16f);
+        }
+
+        TextMeshProUGUI labelText = CreateHomeText(
+            tab.transform, "Label", label, 22f, color,
+            new Vector2(0f, -95f), new Vector2(140f, 34f));
+        if (name == "LevelTab")
+            homeLevelNavText = labelText;
+        button.onClick.AddListener(() =>
+        {
+            TriggerHaptic(false);
+            onClick?.Invoke();
+        });
+    }
+
+    TextMeshProUGUI CreateHomeText(
+        Transform parent,
+        string objectName,
+        string text,
+        float fontSize,
+        Color color,
+        Vector2 position,
+        Vector2 size)
+    {
+        GameObject textObject = new GameObject(objectName);
+        textObject.transform.SetParent(parent, false);
+        TextMeshProUGUI tmp = textObject.AddComponent<TextMeshProUGUI>();
+        tmp.text = text;
+        StyleBoldTMP(tmp, fontSize, color);
+        RectTransform rect = textObject.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
+        return tmp;
+    }
+
+    void CreateBoosterLabel(Transform parent, string name, string label, float width)
+    {
+        TextMeshProUGUI text = CreateHomeText(
+            parent, name, label, 19f, new Color(0.22f, 0.29f, 0.40f),
+            new Vector2(0f, -84f), new Vector2(width + 48f, 34f));
+        text.fontStyle = FontStyles.Bold;
+    }
+
+    void CreateSimpleBoosterButton(
+        Transform parent,
+        string name,
+        string label,
+        UiIcon icon,
+        Vector2 position,
+        System.Action onClick,
+        string badge = "+")
+    {
+        GameObject booster = new GameObject(name);
+        booster.transform.SetParent(parent, false);
+        Button button = booster.AddComponent<Button>();
+        Image background = booster.AddComponent<Image>();
+        background.sprite = circleSprite;
+        background.color = Color.white;
+        Shadow shadow = booster.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.22f, 0.32f, 0.48f, 0.16f);
+        shadow.effectDistance = new Vector2(0f, -5f);
+        RectTransform rect = booster.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0.5f, 0f);
+        rect.anchorMax = new Vector2(0.5f, 0f);
+        rect.anchoredPosition = position;
+        rect.sizeDelta = new Vector2(116f, 116f);
+
+        GameObject iconObject = new GameObject("BoosterIcon");
+        iconObject.transform.SetParent(booster.transform, false);
+        Image iconImage = iconObject.AddComponent<Image>();
+        iconImage.sprite = GetOrCreateUiIconSprite(icon);
+        iconImage.color = new Color(0.18f, 0.42f, 0.86f);
+        iconImage.preserveAspect = true;
+        iconImage.raycastTarget = false;
+        iconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(64f, 64f);
+
+        TextMeshProUGUI badgeText = CreateHudCountBadge(booster.transform, "BoosterBadge", new Vector2(116f, 116f));
+        badgeText.text = badge;
+        CreateBoosterLabel(booster.transform, name + "Label", label, 116f);
+        button.onClick.AddListener(() =>
+        {
+            TriggerHaptic(false);
+            onClick?.Invoke();
+        });
+    }
+
+    Sprite CreateHomeFeatureCardSprite(int size, int height, Color topColor, Color middleColor, Color bottomColor, bool tighterTopLeft)
+    {
+        Texture2D texture = new Texture2D(size, height, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        float shortRadius = size * 0.12f;
+        float longRadius = size * 0.24f;
+        float topLeft = tighterTopLeft ? shortRadius : longRadius;
+        float topRight = tighterTopLeft ? longRadius : shortRadius;
+
+        for (int y = 0; y < height; y++)
+        {
+            float vertical = 1f - y / (float)(height - 1);
+            Color gradient = vertical < 0.5f
+                ? Color.Lerp(bottomColor, middleColor, vertical * 2f)
+                : Color.Lerp(middleColor, topColor, (vertical - 0.5f) * 2f);
+            for (int x = 0; x < size; x++)
+            {
+                float radius = x < size * 0.5f
+                    ? (y < height * 0.5f ? longRadius : topLeft)
+                    : (y < height * 0.5f ? longRadius : topRight);
+                float cx = x < size * 0.5f ? x : size - 1 - x;
+                float cy = y < height * 0.5f ? y : height - 1 - y;
+                float dx = Mathf.Max(0f, radius - cx);
+                float dy = Mathf.Max(0f, radius - cy);
+                float distanceOutside = Mathf.Sqrt(dx * dx + dy * dy) - radius;
+                float alpha = Mathf.Clamp01(0.5f - distanceOutside);
+                gradient.a = alpha;
+                texture.SetPixel(x, y, gradient);
+            }
+        }
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, size, height), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    Sprite CreateHomePlayButtonSprite(int width, int height)
+    {
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        float radius = height * 0.5f;
+        Color top = new Color(0.23f, 0.51f, 0.96f);
+        Color middle = new Color(0.15f, 0.38f, 0.90f);
+        Color bottom = new Color(0.11f, 0.28f, 0.82f);
+        for (int y = 0; y < height; y++)
+        {
+            float t = y / (float)(height - 1);
+            Color color = t > 0.5f ? Color.Lerp(middle, top, (t - 0.5f) * 2f) : Color.Lerp(bottom, middle, t * 2f);
+            for (int x = 0; x < width; x++)
+            {
+                float cx = x < radius ? radius - x : x >= width - radius ? x - (width - radius) : 0f;
+                float cy = y < radius ? radius - y : y >= height - radius ? y - (height - radius) : 0f;
+                float edge = Mathf.Sqrt(cx * cx + cy * cy);
+                color.a = Mathf.Clamp01(radius + 0.5f - edge);
+                texture.SetPixel(x, y, color);
+            }
+        }
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    Sprite CreatePlayShimmerSprite(int width, int height)
+    {
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        for (int x = 0; x < width; x++)
+        {
+            float t = x / (float)(width - 1);
+            float alpha = Mathf.Clamp01(1f - Mathf.Abs(t - 0.5f) * 2f) * 0.32f;
+            for (int y = 0; y < height; y++)
+                texture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+        }
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f);
+    }
+
+    Sprite GetOrCreateUiIconSprite(UiIcon icon)
+    {
+        if (uiIconSprites.TryGetValue(icon, out Sprite sprite) && sprite != null)
+            return sprite;
+
+        const int size = 128;
+        Texture2D texture = new Texture2D(size, size, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        Color clear = new Color(1f, 1f, 1f, 0f);
+        for (int y = 0; y < size; y++)
+            for (int x = 0; x < size; x++)
+                texture.SetPixel(x, y, clear);
+
+        float stroke = size * 0.055f;
+        switch (icon)
+        {
+            case UiIcon.Home:
+                DrawUiPolyline(texture, new[] { new Vector2(0.16f, 0.49f), new Vector2(0.5f, 0.80f), new Vector2(0.84f, 0.49f) }, stroke, true);
+                DrawUiPolyline(texture, new[] { new Vector2(0.27f, 0.54f), new Vector2(0.27f, 0.21f), new Vector2(0.73f, 0.21f), new Vector2(0.73f, 0.54f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.44f, 0.21f), new Vector2(0.44f, 0.42f), new Vector2(0.56f, 0.42f), new Vector2(0.56f, 0.21f) }, stroke, false);
+                break;
+            case UiIcon.Users:
+                DrawUiCircle(texture, new Vector2(0.34f, 0.67f), 0.105f, stroke, false);
+                DrawUiCircle(texture, new Vector2(0.66f, 0.67f), 0.105f, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.12f, 0.30f), new Vector2(0.15f, 0.40f), new Vector2(0.25f, 0.47f), new Vector2(0.38f, 0.49f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.62f, 0.49f), new Vector2(0.75f, 0.47f), new Vector2(0.85f, 0.40f), new Vector2(0.88f, 0.30f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.30f, 0.27f), new Vector2(0.34f, 0.40f), new Vector2(0.50f, 0.48f), new Vector2(0.66f, 0.40f), new Vector2(0.70f, 0.27f) }, stroke, false);
+                break;
+            case UiIcon.Gift:
+                DrawUiPolyline(texture, new[] { new Vector2(0.22f, 0.55f), new Vector2(0.78f, 0.55f), new Vector2(0.74f, 0.24f), new Vector2(0.26f, 0.24f), new Vector2(0.22f, 0.55f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.18f, 0.57f), new Vector2(0.82f, 0.57f), new Vector2(0.82f, 0.68f), new Vector2(0.18f, 0.68f), new Vector2(0.18f, 0.57f) }, stroke, false);
+                DrawUiLine(texture, new Vector2(0.50f, 0.24f), new Vector2(0.50f, 0.68f), stroke, Color.white);
+                DrawUiPolyline(texture, new[] { new Vector2(0.50f, 0.68f), new Vector2(0.34f, 0.74f), new Vector2(0.26f, 0.68f), new Vector2(0.31f, 0.62f), new Vector2(0.50f, 0.68f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.50f, 0.68f), new Vector2(0.66f, 0.74f), new Vector2(0.74f, 0.68f), new Vector2(0.69f, 0.62f), new Vector2(0.50f, 0.68f) }, stroke, false);
+                break;
+            case UiIcon.Lock:
+                DrawUiPolyline(texture, new[] { new Vector2(0.24f, 0.56f), new Vector2(0.76f, 0.56f), new Vector2(0.76f, 0.20f), new Vector2(0.24f, 0.20f), new Vector2(0.24f, 0.56f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.34f, 0.56f), new Vector2(0.34f, 0.68f), new Vector2(0.40f, 0.78f), new Vector2(0.50f, 0.81f), new Vector2(0.60f, 0.78f), new Vector2(0.66f, 0.68f), new Vector2(0.66f, 0.56f) }, stroke, false);
+                DrawUiCircle(texture, new Vector2(0.50f, 0.42f), 0.045f, stroke, true);
+                DrawUiLine(texture, new Vector2(0.50f, 0.39f), new Vector2(0.50f, 0.30f), stroke, Color.white);
+                break;
+            case UiIcon.User:
+                DrawUiCircle(texture, new Vector2(0.50f, 0.67f), 0.15f, 0f, true);
+                DrawUiPolyline(texture, new[] { new Vector2(0.20f, 0.22f), new Vector2(0.22f, 0.34f), new Vector2(0.31f, 0.43f), new Vector2(0.50f, 0.48f), new Vector2(0.69f, 0.43f), new Vector2(0.78f, 0.34f), new Vector2(0.80f, 0.22f) }, stroke, false);
+                break;
+            case UiIcon.Clock:
+                DrawUiCircle(texture, new Vector2(0.50f, 0.50f), 0.34f, stroke, false);
+                DrawUiLine(texture, new Vector2(0.50f, 0.50f), new Vector2(0.50f, 0.70f), stroke, Color.white);
+                DrawUiLine(texture, new Vector2(0.50f, 0.50f), new Vector2(0.66f, 0.42f), stroke, Color.white);
+                break;
+            case UiIcon.Undo:
+                DrawUiPolyline(texture, new[] { new Vector2(0.28f, 0.68f), new Vector2(0.17f, 0.68f), new Vector2(0.17f, 0.57f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.18f, 0.64f), new Vector2(0.34f, 0.77f), new Vector2(0.56f, 0.77f), new Vector2(0.74f, 0.65f), new Vector2(0.78f, 0.48f), new Vector2(0.70f, 0.32f), new Vector2(0.52f, 0.25f), new Vector2(0.34f, 0.28f) }, stroke, false);
+                break;
+            case UiIcon.Reset:
+                DrawUiPolyline(texture, new[] { new Vector2(0.74f, 0.64f), new Vector2(0.69f, 0.79f), new Vector2(0.55f, 0.85f), new Vector2(0.38f, 0.82f), new Vector2(0.25f, 0.70f), new Vector2(0.20f, 0.52f), new Vector2(0.26f, 0.35f), new Vector2(0.40f, 0.24f), new Vector2(0.58f, 0.23f), new Vector2(0.73f, 0.32f) }, stroke, false);
+                DrawUiPolyline(texture, new[] { new Vector2(0.74f, 0.64f), new Vector2(0.74f, 0.45f), new Vector2(0.56f, 0.49f) }, stroke, false);
+                break;
+            case UiIcon.Shield:
+                DrawUiPolyline(texture, new[] { new Vector2(0.50f, 0.82f), new Vector2(0.78f, 0.70f), new Vector2(0.75f, 0.46f), new Vector2(0.64f, 0.29f), new Vector2(0.50f, 0.18f), new Vector2(0.36f, 0.29f), new Vector2(0.25f, 0.46f), new Vector2(0.22f, 0.70f), new Vector2(0.50f, 0.82f) }, stroke, false);
+                break;
+            case UiIcon.Heart:
+                DrawUiPolyline(texture, new[] { new Vector2(0.50f, 0.24f), new Vector2(0.20f, 0.52f), new Vector2(0.20f, 0.66f), new Vector2(0.30f, 0.77f), new Vector2(0.42f, 0.78f), new Vector2(0.50f, 0.68f), new Vector2(0.58f, 0.78f), new Vector2(0.70f, 0.77f), new Vector2(0.80f, 0.66f), new Vector2(0.80f, 0.52f), new Vector2(0.50f, 0.24f) }, stroke, false);
+                break;
+            case UiIcon.Bolt:
+                DrawUiPolyline(texture, new[] { new Vector2(0.57f, 0.84f), new Vector2(0.29f, 0.49f), new Vector2(0.48f, 0.49f), new Vector2(0.40f, 0.17f), new Vector2(0.72f, 0.55f), new Vector2(0.53f, 0.55f), new Vector2(0.57f, 0.84f) }, stroke, false);
+                break;
+            case UiIcon.Navigation:
+                DrawUiPolyline(texture, new[] { new Vector2(0.22f, 0.50f), new Vector2(0.78f, 0.50f), new Vector2(0.55f, 0.74f) }, stroke, false);
+                DrawUiLine(texture, new Vector2(0.78f, 0.50f), new Vector2(0.55f, 0.26f), stroke, Color.white);
+                break;
+        }
+
+        texture.Apply();
+        sprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+        uiIconSprites[icon] = sprite;
+        return sprite;
+    }
+
+    static void DrawUiPolyline(Texture2D texture, Vector2[] points, float thickness, bool close)
+    {
+        for (int i = 0; i < points.Length - 1; i++)
+            DrawUiLine(texture, points[i], points[i + 1], thickness, Color.white);
+        if (close && points.Length > 2)
+            DrawUiLine(texture, points[points.Length - 1], points[0], thickness, Color.white);
+    }
+
+    static void DrawUiLine(Texture2D texture, Vector2 start, Vector2 end, float thickness, Color color)
+    {
+        Vector2 a = Vector2.Scale(start, new Vector2(texture.width - 1, texture.height - 1));
+        Vector2 b = Vector2.Scale(end, new Vector2(texture.width - 1, texture.height - 1));
+        float radius = Mathf.Max(0.5f, thickness * 0.5f);
+        int minX = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(a.x, b.x) - radius - 1f));
+        int maxX = Mathf.Min(texture.width - 1, Mathf.CeilToInt(Mathf.Max(a.x, b.x) + radius + 1f));
+        int minY = Mathf.Max(0, Mathf.FloorToInt(Mathf.Min(a.y, b.y) - radius - 1f));
+        int maxY = Mathf.Min(texture.height - 1, Mathf.CeilToInt(Mathf.Max(a.y, b.y) + radius + 1f));
+        Vector2 delta = b - a;
+        float lengthSquared = delta.sqrMagnitude;
+        for (int y = minY; y <= maxY; y++)
+        {
+            for (int x = minX; x <= maxX; x++)
+            {
+                Vector2 point = new Vector2(x, y);
+                float t = lengthSquared > 0f ? Mathf.Clamp01(Vector2.Dot(point - a, delta) / lengthSquared) : 0f;
+                float distance = Vector2.Distance(point, a + delta * t);
+                float coverage = Mathf.Clamp01(radius + 0.75f - distance);
+                if (coverage > 0f)
+                    BlendUiPixel(texture, x, y, color, coverage);
+            }
+        }
+    }
+
+    static void DrawUiCircle(Texture2D texture, Vector2 center, float radius, float thickness, bool filled)
+    {
+        Vector2 pixelCenter = Vector2.Scale(center, new Vector2(texture.width - 1, texture.height - 1));
+        float pixelRadius = radius * texture.width;
+        float pixelThickness = Mathf.Max(1f, thickness);
+        int minX = Mathf.Max(0, Mathf.FloorToInt(pixelCenter.x - pixelRadius - 1f));
+        int maxX = Mathf.Min(texture.width - 1, Mathf.CeilToInt(pixelCenter.x + pixelRadius + 1f));
+        int minY = Mathf.Max(0, Mathf.FloorToInt(pixelCenter.y - pixelRadius - 1f));
+        int maxY = Mathf.Min(texture.height - 1, Mathf.CeilToInt(pixelCenter.y + pixelRadius + 1f));
+        for (int y = minY; y <= maxY; y++)
+        {
+            for (int x = minX; x <= maxX; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x, y), pixelCenter);
+                float coverage = filled
+                    ? Mathf.Clamp01(pixelRadius + 0.5f - distance)
+                    : Mathf.Clamp01(pixelThickness * 0.5f + 0.75f - Mathf.Abs(distance - pixelRadius));
+                if (coverage > 0f)
+                    BlendUiPixel(texture, x, y, Color.white, coverage);
+            }
+        }
+    }
+
+    static void BlendUiPixel(Texture2D texture, int x, int y, Color color, float coverage)
+    {
+        Color source = color;
+        source.a *= coverage;
+        Color destination = texture.GetPixel(x, y);
+        float alpha = source.a + destination.a * (1f - source.a);
+        if (alpha <= 0f)
+        {
+            texture.SetPixel(x, y, Color.clear);
+            return;
+        }
+        Color result = (source * source.a + destination * destination.a * (1f - source.a)) / alpha;
+        result.a = alpha;
+        texture.SetPixel(x, y, result);
+    }
+
+    void UpdateHomeAnimations()
+    {
+        if (homeScreenObj == null || !homeScreenObj.activeInHierarchy)
+            return;
+
+        homeAnimationTime += Time.unscaledDeltaTime;
+        if (homePlayButtonRect != null)
+            homePlayButtonRect.localScale = Vector3.one * (1f + Mathf.Sin(homeAnimationTime * 2.1f) * 0.008f);
+
+        if (homeShimmerRect != null)
+        {
+            float progress = (homeAnimationTime % 3.6f) / 3.6f;
+            homeShimmerRect.anchoredPosition = new Vector2(Mathf.Lerp(-560f, 560f, progress), 0f);
+        }
+    }
+
+    int GetNextMilestoneLevel()
+    {
+        return ((Mathf.Max(1, currentLevel) - 1) / 25 + 1) * 25;
+    }
+
+    void RefreshHomeDashboard()
+    {
+        if (homeCoinText != null)
+            homeCoinText.text = playerCoins.ToString();
+        if (challengeCoinText != null)
+            challengeCoinText.text = playerCoins.ToString();
+        if (homePlayLevelText != null)
+            homePlayLevelText.text = $"Level {currentLevel}";
+        int milestone = GetNextMilestoneLevel();
+        if (homeMilestoneBadgeText != null)
+            homeMilestoneBadgeText.text = $"LVL {milestone}";
+        if (homeLevelNavText != null)
+            homeLevelNavText.text = $"Level {milestone}";
+    }
+
+    void StartCampaignFromHome()
+    {
+        TriggerHaptic(false);
+        if (homeScreenObj != null) homeScreenObj.SetActive(false);
+        if (challengesScreenObj != null) challengesScreenObj.SetActive(false);
+        isChallengeMode = false;
+        activeChallengeMode = ChallengeMode.Daily;
+        isPaused = false;
+        LoadLevel(currentLevel);
+    }
+
+    void RestartCurrentRun()
+    {
+        if (isChallengeMode)
+            StartChallengeGameplay(false, activeChallengeMode);
+        else
+            LoadLevel(currentLevel);
+    }
+
+    void ShowHomeNotice(string title, string message)
+    {
+        if (homeNoticeModalObj == null)
+            return;
+        homeNoticeTitleText.text = title;
+        homeNoticeMessageText.text = message;
+        homeNoticeModalObj.SetActive(true);
+        homeNoticeModalObj.transform.SetAsLastSibling();
+    }
+
+    void BuildHomeNoticeModal(Transform canvasTr)
+    {
+        Transform existing = canvasTr.Find("HomeNoticeModal");
+        if (existing != null) Destroy(existing.gameObject);
+
+        homeNoticeModalObj = new GameObject("HomeNoticeModal");
+        homeNoticeModalObj.transform.SetParent(canvasTr, false);
+        Image overlay = homeNoticeModalObj.AddComponent<Image>();
+        overlay.color = new Color(0.04f, 0.08f, 0.16f, 0.48f);
+        RectTransform overlayRect = homeNoticeModalObj.GetComponent<RectTransform>();
+        overlayRect.anchorMin = Vector2.zero;
+        overlayRect.anchorMax = Vector2.one;
+        overlayRect.sizeDelta = Vector2.zero;
+
+        GameObject card = new GameObject("NoticeCard");
+        card.transform.SetParent(homeNoticeModalObj.transform, false);
+        Image cardImage = card.AddComponent<Image>();
+        cardImage.sprite = roundedCardSprite;
+        cardImage.color = Color.white;
+        Shadow cardShadow = card.AddComponent<Shadow>();
+        cardShadow.effectColor = new Color(0.04f, 0.08f, 0.16f, 0.20f);
+        cardShadow.effectDistance = new Vector2(0f, -10f);
+        RectTransform cardRect = card.GetComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+        cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+        cardRect.anchoredPosition = Vector2.zero;
+        cardRect.sizeDelta = new Vector2(780f, 440f);
+
+        homeNoticeTitleText = CreateHomeText(card.transform, "NoticeTitle", "Coming Soon", 54f,
+            new Color(0.12f, 0.18f, 0.29f), new Vector2(0f, 118f), new Vector2(690f, 80f));
+        homeNoticeMessageText = CreateHomeText(card.transform, "NoticeMessage", "This feature is coming soon.",
+            32f, new Color(0.38f, 0.44f, 0.54f), new Vector2(0f, 10f), new Vector2(680f, 100f));
+        GameObject closeButton = CreatePillButton(card.transform, "NoticeCloseButton", "Got it",
+            new Color(0.20f, 0.43f, 0.91f), Color.white, new Vector2(0f, -135f),
+            new Vector2(470f, 92f), 36f, false);
+        closeButton.GetComponent<Button>().onClick.AddListener(() => homeNoticeModalObj.SetActive(false));
+        homeNoticeModalObj.SetActive(false);
+    }
+
+    void BuildChallengesScreen(Transform canvasTr)
+    {
+        Transform existing = canvasTr.Find("ChallengesScreen");
+        if (existing != null) Destroy(existing.gameObject);
+
+        challengesScreenObj = new GameObject("ChallengesScreen");
+        challengesScreenObj.transform.SetParent(canvasTr, false);
+        Image background = challengesScreenObj.AddComponent<Image>();
+        background.color = new Color(0.973f, 0.976f, 0.980f);
+        RectTransform screenRect = challengesScreenObj.GetComponent<RectTransform>();
+        screenRect.anchorMin = Vector2.zero;
+        screenRect.anchorMax = Vector2.one;
+        screenRect.sizeDelta = Vector2.zero;
+
+        GameObject backButton = new GameObject("ChallengesBackButton");
+        backButton.transform.SetParent(challengesScreenObj.transform, false);
+        Button back = backButton.AddComponent<Button>();
+        Image backBackground = backButton.AddComponent<Image>();
+        backBackground.sprite = roundedCardSprite;
+        backBackground.color = Color.white;
+        Outline backOutline = backButton.AddComponent<Outline>();
+        backOutline.effectColor = new Color(0.88f, 0.91f, 0.95f);
+        backOutline.effectDistance = new Vector2(1f, -1f);
+        RectTransform backRect = backButton.GetComponent<RectTransform>();
+        backRect.anchorMin = new Vector2(0f, 1f);
+        backRect.anchorMax = backRect.anchorMin;
+        backRect.anchoredPosition = new Vector2(94f, -140f);
+        backRect.sizeDelta = new Vector2(88f, 88f);
+        GameObject backIconObject = new GameObject("BackIcon");
+        backIconObject.transform.SetParent(backButton.transform, false);
+        Image backIcon = backIconObject.AddComponent<Image>();
+        backIcon.sprite = GetOrCreateUiIconSprite(UiIcon.Navigation);
+        backIcon.color = new Color(0.15f, 0.39f, 0.83f);
+        backIcon.preserveAspect = true;
+        backIcon.rectTransform.sizeDelta = new Vector2(34f, 34f);
+        backIcon.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 180f);
+        back.onClick.AddListener(OpenHomeScreen);
+
+        TextMeshProUGUI title = CreateHomeText(
+            challengesScreenObj.transform, "ChallengesTitle", "Challenges", 54f,
+            new Color(0.14f, 0.19f, 0.28f), new Vector2(0f, -140f), new Vector2(430f, 74f));
+        title.fontStyle = FontStyles.Bold;
+
+        CreateCoinWallet(challengesScreenObj.transform, "ChallengesCoinPill",
+            new Vector2(1f, 1f), new Vector2(-210f, -140f), new Vector2(330f, 86f), out challengeCoinText);
+
+        GameObject scrollObject = new GameObject("ChallengeListScroll");
+        scrollObject.transform.SetParent(challengesScreenObj.transform, false);
+        Image scrollBackground = scrollObject.AddComponent<Image>();
+        scrollBackground.color = new Color(0.973f, 0.976f, 0.980f, 1f);
+        scrollBackground.raycastTarget = true;
+        Mask mask = scrollObject.AddComponent<Mask>();
+        mask.showMaskGraphic = false;
+        ScrollRect scroll = scrollObject.AddComponent<ScrollRect>();
+        RectTransform scrollRect = scrollObject.GetComponent<RectTransform>();
+        scrollRect.anchorMin = Vector2.zero;
+        scrollRect.anchorMax = Vector2.one;
+        scrollRect.offsetMin = new Vector2(36f, 225f);
+        scrollRect.offsetMax = new Vector2(-36f, -230f);
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 50f;
+
+        GameObject contentObject = new GameObject("ChallengeListContent");
+        contentObject.transform.SetParent(scrollObject.transform, false);
+        RectTransform contentRect = contentObject.GetComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = new Vector2(1f, 1f);
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.sizeDelta = Vector2.zero;
+        VerticalLayoutGroup layout = contentObject.AddComponent<VerticalLayoutGroup>();
+        layout.padding = new RectOffset(0, 0, 20, 20);
+        layout.spacing = 22f;
+        layout.childAlignment = TextAnchor.UpperCenter;
+        layout.childControlWidth = true;
+        layout.childControlHeight = true;
+        layout.childForceExpandWidth = true;
+        layout.childForceExpandHeight = false;
+        ContentSizeFitter fitter = contentObject.AddComponent<ContentSizeFitter>();
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        scroll.content = contentRect;
+        scroll.viewport = scrollRect;
+
+        CreateChallengeCard(contentObject.transform, "OneMinuteRushCard", "1-Minute Rush", "Speed Mode",
+            "Clear the puzzle in 60 seconds!", new Color(0.30f, 0.67f, 1f), new Color(0.17f, 0.43f, 0.94f),
+            UiIcon.Clock, 50, ChallengeMode.OneMinuteRush, false);
+        CreateChallengeCard(contentObject.transform, "ZeroHeartsCard", "Zero Hearts", "Flawless Run",
+            "Solve the level with zero mistakes.", new Color(1f, 0.42f, 0.42f), new Color(0.91f, 0.12f, 0.29f),
+            UiIcon.Shield, 75, ChallengeMode.ZeroHearts, false);
+        CreateChallengeCard(contentObject.transform, "OneHeartSurvivalCard", "1-Heart Survival", "Hardcore",
+            "Only 1 life left - tap carefully!", new Color(0.71f, 0.35f, 0.96f), new Color(0.46f, 0.13f, 0.95f),
+            UiIcon.Heart, 100, ChallengeMode.OneHeartSurvival, false);
+        CreateChallengeCard(contentObject.transform, "MoveMasterCard", "Move Master", "Taps Limit",
+            "Clear the board in 20 taps.", new Color(0.90f, 0.91f, 0.93f), new Color(0.83f, 0.85f, 0.88f),
+            UiIcon.Lock, 150, ChallengeMode.MoveMaster, currentLevel < 30);
+
+        BuildChallengesBottomNavigation(challengesScreenObj.transform);
+        challengesScreenObj.SetActive(false);
+    }
+
+    void CreateChallengeCard(
+        Transform parent,
+        string objectName,
+        string title,
+        string category,
+        string description,
+        Color topColor,
+        Color bottomColor,
+        UiIcon icon,
+        int reward,
+        ChallengeMode mode,
+        bool locked)
+    {
+        GameObject card = new GameObject(objectName);
+        card.transform.SetParent(parent, false);
+        Image background = card.AddComponent<Image>();
+        background.sprite = CreateVerticalGradientCardSprite(512, 320, 52f, topColor, bottomColor);
+        background.type = Image.Type.Sliced;
+        background.color = Color.white;
+        Shadow shadow = card.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.10f, 0.18f, 0.30f, locked ? 0.04f : 0.14f);
+        shadow.effectDistance = new Vector2(0f, -6f);
+        Outline outline = card.AddComponent<Outline>();
+        outline.effectColor = locked ? new Color(0.80f, 0.83f, 0.87f) : new Color(1f, 1f, 1f, 0.22f);
+        outline.effectDistance = new Vector2(1f, -1f);
+        LayoutElement layout = card.AddComponent<LayoutElement>();
+        layout.preferredHeight = 280f;
+        layout.minHeight = 260f;
+        layout.flexibleHeight = 0f;
+        RectTransform cardRect = card.GetComponent<RectTransform>();
+        cardRect.anchorMin = new Vector2(0.5f, 1f);
+        cardRect.anchorMax = cardRect.anchorMin;
+        cardRect.pivot = new Vector2(0.5f, 1f);
+        cardRect.sizeDelta = new Vector2(0f, 280f);
+
+        Color textColor = locked ? new Color(0.37f, 0.41f, 0.47f) : Color.white;
+        GameObject iconBadge = new GameObject("ChallengeIconBadge");
+        iconBadge.transform.SetParent(card.transform, false);
+        Image iconBackground = iconBadge.AddComponent<Image>();
+        iconBackground.sprite = roundedCardSprite;
+        iconBackground.color = locked ? new Color(0.68f, 0.71f, 0.75f, 0.50f) : new Color(1f, 1f, 1f, 0.22f);
+        if (!locked)
+        {
+            Outline iconOutline = iconBadge.AddComponent<Outline>();
+            iconOutline.effectColor = new Color(1f, 1f, 1f, 0.32f);
+            iconOutline.effectDistance = new Vector2(1f, -1f);
+        }
+        RectTransform iconRect = iconBadge.GetComponent<RectTransform>();
+        iconRect.anchorMin = new Vector2(0f, 1f);
+        iconRect.anchorMax = iconRect.anchorMin;
+        iconRect.pivot = new Vector2(0f, 1f);
+        iconRect.anchoredPosition = new Vector2(30f, -25f);
+        iconRect.sizeDelta = new Vector2(80f, 80f);
+
+        GameObject iconObject = new GameObject("Icon");
+        iconObject.transform.SetParent(iconBadge.transform, false);
+        Image iconImage = iconObject.AddComponent<Image>();
+        iconImage.sprite = GetOrCreateUiIconSprite(icon);
+        iconImage.color = locked ? new Color(0.49f, 0.53f, 0.59f) : Color.white;
+        iconImage.preserveAspect = true;
+        iconImage.raycastTarget = false;
+        iconObject.GetComponent<RectTransform>().sizeDelta = new Vector2(46f, 46f);
+
+        TextMeshProUGUI titleText = CreateHomeText(card.transform, "ChallengeTitle", title, 36f, textColor,
+            new Vector2(118f, -42f), new Vector2(570f, 48f));
+        titleText.alignment = TextAlignmentOptions.Left;
+        titleText.fontStyle = FontStyles.Bold;
+        TextMeshProUGUI categoryText = CreateHomeText(card.transform, "ChallengeCategory", category.ToUpperInvariant(), 21f,
+            locked ? new Color(0.54f, 0.58f, 0.64f) : new Color(1f, 1f, 1f, 0.82f),
+            new Vector2(118f, -78f), new Vector2(570f, 34f));
+        categoryText.alignment = TextAlignmentOptions.Left;
+
+        TextMeshProUGUI descriptionText = CreateHomeText(card.transform, "ChallengeDescription", description, 24f,
+            locked ? new Color(0.40f, 0.44f, 0.50f) : new Color(1f, 1f, 1f, 0.93f),
+            new Vector2(0f, -132f), new Vector2(660f, 42f));
+        descriptionText.alignment = TextAlignmentOptions.Left;
+
+        GameObject playButtonObject = new GameObject("ChallengePlayButton");
+        playButtonObject.transform.SetParent(card.transform, false);
+        Button playButton = playButtonObject.AddComponent<Button>();
+        Image playBackground = playButtonObject.AddComponent<Image>();
+        playBackground.sprite = pillSprite;
+        playBackground.type = Image.Type.Sliced;
+        playBackground.color = locked ? Color.white : new Color(1f, 1f, 1f, 0.22f);
+        if (!locked)
+        {
+            Outline playOutline = playButtonObject.AddComponent<Outline>();
+            playOutline.effectColor = new Color(1f, 1f, 1f, 0.40f);
+            playOutline.effectDistance = new Vector2(1f, -1f);
+        }
+        RectTransform playRect = playButtonObject.GetComponent<RectTransform>();
+        playRect.anchorMin = new Vector2(1f, 0f);
+        playRect.anchorMax = playRect.anchorMin;
+        playRect.pivot = new Vector2(1f, 0f);
+        playRect.anchoredPosition = new Vector2(-24f, 20f);
+        playRect.sizeDelta = new Vector2(230f, 58f);
+
+        string buttonText = locked ? "Unlock at LVL 30" : $"Play   |   +{reward}";
+        TextMeshProUGUI buttonLabel = CreateHomeText(playButtonObject.transform, "ButtonText", buttonText, 22f,
+            locked ? new Color(0.39f, 0.43f, 0.49f) : Color.white, Vector2.zero, new Vector2(220f, 54f));
+        buttonLabel.fontStyle = FontStyles.Bold;
+        playButton.interactable = !locked;
+        playButton.onClick.AddListener(() => RequestChallengeRun(mode));
+    }
+
+    void BuildChallengesBottomNavigation(Transform parent)
+    {
+        GameObject navigation = new GameObject("ChallengesBottomNavigation");
+        navigation.transform.SetParent(parent, false);
+        Image background = navigation.AddComponent<Image>();
+        background.color = Color.white;
+        Shadow shadow = navigation.AddComponent<Shadow>();
+        shadow.effectColor = new Color(0.12f, 0.18f, 0.28f, 0.08f);
+        shadow.effectDistance = new Vector2(0f, 8f);
+        RectTransform rect = navigation.GetComponent<RectTransform>();
+        rect.anchorMin = new Vector2(0f, 0f);
+        rect.anchorMax = new Vector2(1f, 0f);
+        rect.pivot = new Vector2(0.5f, 0f);
+        rect.sizeDelta = new Vector2(0f, 150f);
+
+        CreateHomeNavTab(navigation.transform, "HomeTab", 0.18f, UiIcon.Home, "Home",
+            new Color(0.48f, 0.54f, 0.63f), false, OpenHomeScreen);
+        CreateHomeNavTab(navigation.transform, "ChallengesTab", 0.50f, UiIcon.Lock, "Challenges",
+            new Color(0.16f, 0.42f, 0.92f), true, () => { });
+        CreateHomeNavTab(navigation.transform, "PlayGameTab", 0.82f, UiIcon.Navigation, "Play Game",
+            new Color(0.48f, 0.54f, 0.63f), false, StartCampaignFromHome);
+    }
+
+    void RequestChallengeRun(ChallengeMode mode)
+    {
+        if (mode == ChallengeMode.MoveMaster && currentLevel < 30)
+            return;
+
+        selectedChallengeMode = mode;
+        if (isCurrentChallengeUnlocked)
+        {
+            StartChallengeGameplay(false, mode);
+            return;
+        }
+
+        isPaused = true;
+        if (challengeEntryCoinText != null)
+            challengeEntryCoinText.text = "Pay 500 Coins";
+        if (challengeEntryModalObj != null)
+        {
+            challengeEntryModalObj.SetActive(true);
+            challengeEntryModalObj.transform.SetAsLastSibling();
+        }
     }
 
     // Point 8 & 11: Simple Yellow Sunburst "Challenge" Popup (500 Coins OR Watch Video Ad)
@@ -1820,7 +2977,7 @@ public class GameManager : MonoBehaviour
                 UpdateCoinAndHintUI();
                 challengeEntryModalObj.SetActive(false);
                 if (homeScreenObj != null) homeScreenObj.SetActive(false);
-                StartChallengeGameplay(false);
+                StartChallengeGameplay(false, selectedChallengeMode);
             }
             else
             {
@@ -1839,7 +2996,7 @@ public class GameManager : MonoBehaviour
                 SaveProgress();
                 challengeEntryModalObj.SetActive(false);
                 if (homeScreenObj != null) homeScreenObj.SetActive(false);
-                StartChallengeGameplay(false);
+                StartChallengeGameplay(false, selectedChallengeMode);
             });
         });
 
@@ -1854,13 +3011,14 @@ public class GameManager : MonoBehaviour
 
     public void OpenDailyChallengeEntryModal()
     {
+        selectedChallengeMode = ChallengeMode.Daily;
         // Point 8: If the user already paid 500 coins or watched an Ad and hasn't finished that challenge yet,
         // resume it immediately without asking for coins or an Ad again!
         if (isCurrentChallengeUnlocked)
         {
             if (homeScreenObj != null) homeScreenObj.SetActive(false);
             if (challengeEntryModalObj != null) challengeEntryModalObj.SetActive(false);
-            StartChallengeGameplay(false);
+            StartChallengeGameplay(false, ChallengeMode.Daily);
             return;
         }
 
@@ -2054,13 +3212,13 @@ public class GameManager : MonoBehaviour
         multiplayerModalObj.transform.SetParent(canvasTr, false);
 
         Image bg = multiplayerModalObj.AddComponent<Image>();
-        bg.color = new Color(0.05f, 0.04f, 0.16f, 0.72f);
+        bg.color = new Color(0.04f, 0.08f, 0.16f, 0.48f);
         RectTransform rt = multiplayerModalObj.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        GameObject card = CreateYellowSunburstModalCard(multiplayerModalObj.transform, "MultiplayerCard", new Vector2(760f, 620f));
+        GameObject card = CreateCleanWhiteModalCard(multiplayerModalObj.transform, "MultiplayerCard", new Vector2(760f, 620f));
 
         GameObject tObj = new GameObject("Title");
         tObj.transform.SetParent(card.transform, false);
@@ -2098,8 +3256,12 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // Point 9: Daily Challenge with 150-200 Snakes & 3-Minute Timer (180s)!
     public void StartChallengeGameplay(bool advancePatternSeed)
+    {
+        StartChallengeGameplay(advancePatternSeed, ChallengeMode.Daily);
+    }
+
+    void StartChallengeGameplay(bool advancePatternSeed, ChallengeMode mode)
     {
         ResetLevelTransitionEffects();
         CancelEraserSelection();
@@ -2111,6 +3273,9 @@ public class GameManager : MonoBehaviour
             SaveProgress();
         }
 
+        selectedChallengeMode = mode;
+        activeChallengeMode = mode;
+        challengeTapCount = 0;
         isChallengeMode = true;
         isPaused = false;
         isGridGuideActiveThisLevel = false;
@@ -2121,27 +3286,36 @@ public class GameManager : MonoBehaviour
         if (winModalObj != null) winModalObj.SetActive(false);
         if (gameOverModalObj != null) gameOverModalObj.SetActive(false);
         if (praiseFloatingObj != null) praiseFloatingObj.SetActive(false);
+        if (homeScreenObj != null) homeScreenObj.SetActive(false);
+        if (challengesScreenObj != null) challengesScreenObj.SetActive(false);
+        if (challengeEntryModalObj != null) challengeEntryModalObj.SetActive(false);
 
         DestroyLevelSnakes();
         ResetBoardGrid();
 
-        lives = 3;
+        lives = mode == ChallengeMode.OneHeartSurvival || mode == ChallengeMode.MoveMaster ? 1 : 3;
         UpdateHeartsUI();
         UpdateCoinAndHintUI();
 
         System.DateTime now = System.DateTime.Now;
-        if (levelText != null) levelText.text = now.ToString("MMMM d");
-        if (difficultyText != null) difficultyText.text = "Extreme";
+        if (levelText != null)
+            levelText.text = mode == ChallengeMode.Daily ? now.ToString("MMMM d") : $"Level {currentLevel}";
+        if (difficultyText != null)
+            difficultyText.text = mode == ChallengeMode.Daily ? "Master" : "Hard";
+        if (modeSubtitleText != null)
+            modeSubtitleText.text = GetChallengeModeLabel(mode);
 
-        // 3-Minute Timer (180s) for Daily Challenge!
-        totalTimerDuration = 180f;
-        timeRemaining = 180f;
-        isTimerActive = true;
-        if (timerPillObj != null) timerPillObj.SetActive(true);
-        UpdateTimerUI();
+        totalTimerDuration = mode == ChallengeMode.Daily ? 180f : mode == ChallengeMode.OneMinuteRush ? 60f : 0f;
+        timeRemaining = totalTimerDuration;
+        isTimerActive = totalTimerDuration > 0f;
+        if (timerPillObj != null) timerPillObj.SetActive(isTimerActive);
+        if (isTimerActive) UpdateTimerUI();
 
         int challengeSeed = now.Year * 10000 + now.Month * 100 + now.Day + (Mathf.Max(1, challengeRunCount) * 919);
-        GenerateAddictiveLongSpineMaze(100 + challengeRunCount, challengeSeed, true);
+        if (mode == ChallengeMode.Daily)
+            GenerateAddictiveLongSpineMaze(100 + challengeRunCount, challengeSeed, true);
+        else
+            GenerateAddictiveLongSpineMaze(mode == ChallengeMode.MoveMaster ? 5 : currentLevel, challengeSeed, false);
         initialSnakeCountInLevel = activeSnakes.Count;
         UpdateSnakeCounter();
     }
@@ -2150,13 +3324,68 @@ public class GameManager : MonoBehaviour
     {
         isPaused = true;
         UpdateCoinAndHintUI();
-        if (homeContinueBtnText != null)
-            homeContinueBtnText.text = $"Continue Game\n<size=34>Level {currentLevel}</size>";
+        RefreshHomeDashboard();
+        if (challengeEntryModalObj != null)
+            challengeEntryModalObj.SetActive(false);
+        if (challengesScreenObj != null)
+            challengesScreenObj.SetActive(false);
         if (homeScreenObj != null)
         {
             homeScreenObj.SetActive(true);
             homeScreenObj.transform.SetAsLastSibling();
         }
+    }
+
+    void OpenChallengesScreen()
+    {
+        isPaused = true;
+        if (homeScreenObj != null) homeScreenObj.SetActive(false);
+        if (challengesScreenObj == null) return;
+
+        Transform masterButtonTransform = challengesScreenObj.transform
+            .Find("ChallengeListScroll/ChallengeListContent/MoveMasterCard/ChallengePlayButton");
+        if (masterButtonTransform != null)
+        {
+            bool unlocked = currentLevel >= 30;
+            Button masterButton = masterButtonTransform.GetComponent<Button>();
+            if (masterButton != null)
+                masterButton.interactable = unlocked;
+            TextMeshProUGUI label = masterButtonTransform.GetComponentInChildren<TextMeshProUGUI>();
+            if (label != null)
+                label.text = unlocked ? "Play   |   +150" : "Unlock at LVL 30";
+        }
+
+        RefreshHomeDashboard();
+        challengesScreenObj.SetActive(true);
+        challengesScreenObj.transform.SetAsLastSibling();
+    }
+
+    string GetChallengeModeLabel(ChallengeMode mode)
+    {
+        switch (mode)
+        {
+            case ChallengeMode.OneMinuteRush: return "1-Minute Rush";
+            case ChallengeMode.ZeroHearts: return "Flawless Run";
+            case ChallengeMode.OneHeartSurvival: return "1-Heart Survival";
+            case ChallengeMode.MoveMaster: return "Move Master";
+            default: return "Daily Challenge";
+        }
+    }
+
+    public bool RegisterChallengeTap()
+    {
+        if (!isChallengeMode || activeChallengeMode != ChallengeMode.MoveMaster)
+            return true;
+
+        if (challengeTapCount >= 20)
+        {
+            isTimerActive = false;
+            StartCoroutine(ShowGameOverModalAfterDelay(levelGeneration));
+            return false;
+        }
+
+        challengeTapCount++;
+        return true;
     }
 
     void BuildSimulatedAdOverlay(Transform canvasTr)
@@ -2321,7 +3550,7 @@ public class GameManager : MonoBehaviour
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = col;
         tmp.outlineWidth = 0f;
-        tmp.extraPadding = true;
+        tmp.extraPadding = false;
         tmp.textWrappingMode = TextWrappingModes.NoWrap;
         tmp.overflowMode = TextOverflowModes.Overflow;
     }
@@ -2385,6 +3614,8 @@ public class GameManager : MonoBehaviour
         if (eraserModalObj != null) eraserModalObj.SetActive(false);
 
         isChallengeMode = false;
+        activeChallengeMode = ChallengeMode.Daily;
+        challengeTapCount = 0;
         isPaused = false;
         isGridGuideActiveThisLevel = false;
         halfTimePopupShown = false;
@@ -2405,10 +3636,12 @@ public class GameManager : MonoBehaviour
         UpdateCoinAndHintUI();
 
         if (levelText != null) levelText.text = $"Level {currentLevel}";
+        if (modeSubtitleText != null) modeSubtitleText.text = "Classic Puzzle";
         if (difficultyText != null)
         {
             if (currentLevel <= 5) difficultyText.text = "Easy";
-            else if (currentLevel <= 10) difficultyText.text = "Hard";
+            else if (currentLevel <= 10) difficultyText.text = "Normal";
+            else if (currentLevel <= 20) difficultyText.text = "Hard";
             else difficultyText.text = "Master";
         }
 
@@ -3017,7 +4250,7 @@ public class GameManager : MonoBehaviour
         {
             isTimerActive = false;
             int heartCount = Mathf.Clamp(lives, 1, 3);
-            int coinsEarned = isChallengeMode ? 250 : (heartCount * 10);
+            int coinsEarned = isChallengeMode ? GetChallengeReward(activeChallengeMode) : (heartCount * 10);
             AddCoins(coinsEarned);
 
             if (isChallengeMode)
@@ -3032,6 +4265,18 @@ public class GameManager : MonoBehaviour
             }
 
             StartCoroutine(Celebrate3SecondsAndShowWinScreen(heartCount, coinsEarned, levelGeneration));
+        }
+    }
+
+    int GetChallengeReward(ChallengeMode mode)
+    {
+        switch (mode)
+        {
+            case ChallengeMode.OneMinuteRush: return 50;
+            case ChallengeMode.ZeroHearts: return 75;
+            case ChallengeMode.OneHeartSurvival: return 100;
+            case ChallengeMode.MoveMaster: return 150;
+            default: return 250;
         }
     }
 
@@ -3162,6 +4407,15 @@ public class GameManager : MonoBehaviour
     public void OnMistake()
     {
         TriggerHaptic(true);
+        if (isChallengeMode && activeChallengeMode == ChallengeMode.ZeroHearts)
+        {
+            lives = 0;
+            UpdateHeartsUI();
+            StartCoroutine(AnimateBrokenHeartAndFlash(0));
+            StartCoroutine(ShowGameOverModalAfterDelay(levelGeneration));
+            return;
+        }
+
         if (lives > 0)
         {
             lives--;
@@ -3555,7 +4809,8 @@ public class GameManager : MonoBehaviour
             }
         }
         t.Apply();
-        return Sprite.Create(t, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
+        Vector4 border = new Vector4(radius + 2f, radius + 2f, radius + 2f, radius + 2f);
+        return Sprite.Create(t, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
     }
 
     Sprite CreateCalendarIconSprite(int s)

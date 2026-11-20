@@ -511,6 +511,7 @@ MonoBehaviour:
   pauseButton: {fileID: 0}
   winnerIconSprite: {fileID: -8222406987496834216, guid: d138caba164a52647b271c1c14571c70, type: 3}
   pauseAssetSprite: {fileID: 21300000, guid: 1d645eb297984b74b926cfc2e92f9622, type: 3}
+  hintIconSprite: {fileID: 21300000, guid: fe3e487c3c31d0c4bb26d7bbfe1cc889, type: 3}
   currentSpacing: 0.45
 --- !u!1 &730847075 stripped
 GameObject:

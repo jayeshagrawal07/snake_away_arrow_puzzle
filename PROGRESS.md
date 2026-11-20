@@ -1,7 +1,7 @@
 # 📊 Snake Escape — Project Progress & Task Tracker
 
 > Specification reference: [`SNAKE_ESCAPE_PRODUCTION_PLAN.md`](./SNAKE_ESCAPE_PRODUCTION_PLAN.md)  
-> Last updated: **October 31, 2026**
+> Last updated: **November 20, 2026**
 
 ---
 
@@ -20,6 +20,16 @@ The former overall-completion percentage and milestone checkmarks have been remo
 | Campaign, authoring, release readiness | Not verified as complete; modular level data remains separate from the original game. |
 
 **Architectural decision (October 26, 2026):** Continue using the legacy game and its existing procedural level generator. Reuse and incrementally improve existing code before considering a parallel replacement. The modular authored-level samples are a separate prototype experiment, not the next product integration task. Defer their player-build validation unless a concrete need arises and is discussed.
+
+## Latest Existing-Scene UI and Rendering Update
+
+- Rebuilt the active legacy home dashboard and added a scrollable Challenges screen in `Assets/Legacy/GameManager.cs`; the existing scene and procedural level/save systems remain the runtime path.
+- Added Rush, Zero Hearts, One-Heart Survival, and level-30 Move Master challenge entries, plus the Coming Soon multiplayer notice. The existing challenge wallet/reward flow remains in use.
+- Updated the gameplay HUD layout, including an integrated snake-count progress bar, clock icon without the unsupported timer emoji, and circular booster controls. The Undo control is currently a visible placeholder notice; the legacy game still has no undo implementation.
+- Wired `Assets/Glossy Glowing Light Bulb Icon.png` as the gameplay Hint sprite and configured it as a bilinear, no-mipmap, uncompressed UI sprite.
+- Reduced the configured legacy slither speed to `11f`, added launch acceleration, refined the line taper, and enabled 4x MSAA in the project quality settings and runtime camera setup.
+- Configured the active Canvas for 1080x1920 Scale With Screen Size, Match 0.5, and non-pixel-perfect rendering.
+- Verification: `dotnet build Assembly-CSharp.csproj --no-restore` succeeded on November 20, 2026 with 0 warnings and 0 errors. This verifies C# compilation only; no post-change Unity PlayMode or Android device validation was run.
 
 ## Migration Plan
 
@@ -234,7 +244,7 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [ ] Cloud save synchronization (Google Play Games / Apple Game Center).
 
 ### Advanced Mechanics & Game Modes (Post-Launch)
-- [ ] Challenge Mode (levels with move limits or countdown timer).
+- [x] Add legacy challenge modes for timed, mistake-free, one-heart, and Move Master runs.
 - [ ] Obstacles / Rocks on the grid.
 - [ ] Two-headed snakes or looping snakes.
 - [ ] Snake skin cosmetics & themes (color palettes).

@@ -12,7 +12,7 @@ public class SnakeController : MonoBehaviour
     public Color hintColor = new Color(0.08f, 0.78f, 0.36f);     // Hint Green
 
     public float lineWidth = 0.14f;
-    public float slitherSpeed = 11f;
+    [Min(1f)] public float slitherSpeed = 11f;
 
     [HideInInspector] public bool isMoving = false;
     [HideInInspector] public bool isCleared = false;
@@ -47,9 +47,10 @@ public class SnakeController : MonoBehaviour
 
         lr.material = sharedSmoothLineMat;
         lr.textureMode = LineTextureMode.Stretch;
+        lr.alignment = LineAlignment.View;
         lr.useWorldSpace = true;
-        lr.numCapVertices = 16;
-        lr.numCornerVertices = 12;
+        lr.numCapVertices = 0;
+        lr.numCornerVertices = 0;
         lr.sortingOrder = 5;
 
         AnimationCurve taper = new AnimationCurve();
@@ -57,8 +58,9 @@ public class SnakeController : MonoBehaviour
         taper.AddKey(0.07f, 1.00f);
         taper.AddKey(0.75f, 0.96f);
         taper.AddKey(0.88f, 0.78f);
-        taper.AddKey(0.95f, 0.34f);
-        taper.AddKey(1.00f, 0.02f);
+        taper.AddKey(0.94f, 0.30f);
+        taper.AddKey(0.985f, 0.08f);
+        taper.AddKey(1.00f, 0.00f);
 
         lr.widthCurve = taper;
         lr.widthMultiplier = lineWidth;
@@ -251,6 +253,7 @@ public class SnakeController : MonoBehaviour
     public void TriggerTap()
     {
         if (isMoving || isCleared || GameManager.Instance.isPaused) return;
+        if (!GameManager.Instance.RegisterChallengeTap()) return;
         StartCoroutine(ExecuteTapRoutine());
     }
 
@@ -340,11 +343,14 @@ public class SnakeController : MonoBehaviour
             }
 
             Vector2 fwd = GetWorldForwardDir();
+            float launchElapsed = 0f;
 
             while (currentWaypoints.Count > 1)
             {
                 if (GameManager.Instance.isPaused) { yield return null; continue; }
-                float step = slitherSpeed * Time.deltaTime;
+                launchElapsed += Time.deltaTime;
+                float acceleration = Mathf.SmoothStep(0.58f, 1f, Mathf.Clamp01(launchElapsed / 0.42f));
+                float step = slitherSpeed * acceleration * Time.deltaTime;
                 AdvanceListAlongPath(currentWaypoints, fwd, step);
 
                 RenderCleanSnakeBody(currentWaypoints);

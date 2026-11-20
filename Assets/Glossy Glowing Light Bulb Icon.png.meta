@@ -1,0 +1,1679 @@
+fileFormatVersion: 2
+guid: fe3e487c3c31d0c4bb26d7bbfe1cc889
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -3397140447497159792
+    second: Glossy Glowing Light Bulb Icon_0
+  - first:
+      213: 4097714744882822629
+    second: Glossy Glowing Light Bulb Icon_1
+  - first:
+      213: 9127056901442073668
+    second: Glossy Glowing Light Bulb Icon_2
+  - first:
+      213: -4585759677157877369
+    second: Glossy Glowing Light Bulb Icon_3
+  - first:
+      213: -2845635811999486475
+    second: Glossy Glowing Light Bulb Icon_4
+  - first:
+      213: -2923063927490813943
+    second: Glossy Glowing Light Bulb Icon_5
+  - first:
+      213: -5866701328128151068
+    second: Glossy Glowing Light Bulb Icon_6
+  - first:
+      213: -2031921399059742155
+    second: Glossy Glowing Light Bulb Icon_7
+  - first:
+      213: -3422681450447925922
+    second: Glossy Glowing Light Bulb Icon_8
+  - first:
+      213: -4315413538124109654
+    second: Glossy Glowing Light Bulb Icon_9
+  - first:
+      213: 650227598392499217
+    second: Glossy Glowing Light Bulb Icon_10
+  - first:
+      213: -1839339022489002237
+    second: Glossy Glowing Light Bulb Icon_11
+  - first:
+      213: -6925606033900676238
+    second: Glossy Glowing Light Bulb Icon_12
+  - first:
+      213: -4224167739939452393
+    second: Glossy Glowing Light Bulb Icon_13
+  - first:
+      213: -1562554929085112976
+    second: Glossy Glowing Light Bulb Icon_14
+  - first:
+      213: -2471985466848427850
+    second: Glossy Glowing Light Bulb Icon_15
+  - first:
+      213: 2378958578738774339
+    second: Glossy Glowing Light Bulb Icon_16
+  - first:
+      213: -2480000968061358250
+    second: Glossy Glowing Light Bulb Icon_17
+  - first:
+      213: 182263264978199122
+    second: Glossy Glowing Light Bulb Icon_18
+  - first:
+      213: -793763704544484706
+    second: Glossy Glowing Light Bulb Icon_19
+  - first:
+      213: 1058603041499673869
+    second: Glossy Glowing Light Bulb Icon_20
+  - first:
+      213: -8612385107290182935
+    second: Glossy Glowing Light Bulb Icon_21
+  - first:
+      213: -2916715216268187678
+    second: Glossy Glowing Light Bulb Icon_22
+  - first:
+      213: -5083355985471766612
+    second: Glossy Glowing Light Bulb Icon_23
+  - first:
+      213: 1297182162966207738
+    second: Glossy Glowing Light Bulb Icon_24
+  - first:
+      213: 4945680504344420622
+    second: Glossy Glowing Light Bulb Icon_25
+  - first:
+      213: -1090733550176828971
+    second: Glossy Glowing Light Bulb Icon_26
+  - first:
+      213: 4277385207006365080
+    second: Glossy Glowing Light Bulb Icon_27
+  - first:
+      213: 8420993968699470678
+    second: Glossy Glowing Light Bulb Icon_28
+  - first:
+      213: -5846886110391913713
+    second: Glossy Glowing Light Bulb Icon_29
+  - first:
+      213: -6388346260481474620
+    second: Glossy Glowing Light Bulb Icon_30
+  - first:
+      213: -6648611936969127722
+    second: Glossy Glowing Light Bulb Icon_31
+  - first:
+      213: -1876451271314426761
+    second: Glossy Glowing Light Bulb Icon_32
+  - first:
+      213: 3494092593463238294
+    second: Glossy Glowing Light Bulb Icon_33
+  - first:
+      213: -1532487068273915238
+    second: Glossy Glowing Light Bulb Icon_34
+  - first:
+      213: 3800922525707582317
+    second: Glossy Glowing Light Bulb Icon_35
+  - first:
+      213: 1862915771307124008
+    second: Glossy Glowing Light Bulb Icon_36
+  - first:
+      213: 6661708188544455016
+    second: Glossy Glowing Light Bulb Icon_37
+  - first:
+      213: -2694294651651479002
+    second: Glossy Glowing Light Bulb Icon_38
+  - first:
+      213: 3096706752361062309
+    second: Glossy Glowing Light Bulb Icon_39
+  - first:
+      213: -7833920053659165638
+    second: Glossy Glowing Light Bulb Icon_40
+  - first:
+      213: -8052461077140958064
+    second: Glossy Glowing Light Bulb Icon_41
+  - first:
+      213: -8627109297545716603
+    second: Glossy Glowing Light Bulb Icon_42
+  - first:
+      213: 4492431014858682747
+    second: Glossy Glowing Light Bulb Icon_43
+  - first:
+      213: -8579725975946113247
+    second: Glossy Glowing Light Bulb Icon_44
+  - first:
+      213: 3794221802430548906
+    second: Glossy Glowing Light Bulb Icon_45
+  - first:
+      213: 5393334812995122851
+    second: Glossy Glowing Light Bulb Icon_46
+  - first:
+      213: 81824851308729282
+    second: Glossy Glowing Light Bulb Icon_47
+  - first:
+      213: 22174943904215832
+    second: Glossy Glowing Light Bulb Icon_48
+  - first:
+      213: -3417693008268710928
+    second: Glossy Glowing Light Bulb Icon_49
+  - first:
+      213: 1244160780119658559
+    second: Glossy Glowing Light Bulb Icon_50
+  - first:
+      213: -4313324043693525779
+    second: Glossy Glowing Light Bulb Icon_51
+  - first:
+      213: 8879787701135317808
+    second: Glossy Glowing Light Bulb Icon_52
+  - first:
+      213: 8249578391551090230
+    second: Glossy Glowing Light Bulb Icon_53
+  - first:
+      213: -732803975336009707
+    second: Glossy Glowing Light Bulb Icon_54
+  - first:
+      213: 294302382617917805
+    second: Glossy Glowing Light Bulb Icon_55
+  - first:
+      213: 2582305615179857150
+    second: Glossy Glowing Light Bulb Icon_56
+  - first:
+      213: 5536659511282554540
+    second: Glossy Glowing Light Bulb Icon_57
+  - first:
+      213: -3593643760982055367
+    second: Glossy Glowing Light Bulb Icon_58
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationMethod: 0
+  spriteTessellationDetail: -1
+  spriteGeometrySubdivision: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Android
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: WebGL
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_0
+      rect:
+        serializedVersion: 2
+        x: 129
+        y: 1156
+        width: 74
+        height: 76
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 09bf1d603ceead0d0800000000000000
+      internalID: -3397140447497159792
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_1
+      rect:
+        serializedVersion: 2
+        x: 378
+        y: 1136
+        width: 98
+        height: 104
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5edfe9f89d10ed830800000000000000
+      internalID: 4097714744882822629
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_2
+      rect:
+        serializedVersion: 2
+        x: 411
+        y: 1227
+        width: 9
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4447b3705e1d9ae70800000000000000
+      internalID: 9127056901442073668
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_3
+      rect:
+        serializedVersion: 2
+        x: 548
+        y: 1032
+        width: 128
+        height: 228
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 789d1b9bedb1c50c0800000000000000
+      internalID: -4585759677157877369
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_4
+      rect:
+        serializedVersion: 2
+        x: 750
+        y: 1101
+        width: 62
+        height: 165
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5fde3a94e454288d0800000000000000
+      internalID: -2845635811999486475
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_5
+      rect:
+        serializedVersion: 2
+        x: 1107
+        y: 1166
+        width: 110
+        height: 84
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 900e62258d03f67d0800000000000000
+      internalID: -2923063927490813943
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_6
+      rect:
+        serializedVersion: 2
+        x: 860
+        y: 1198
+        width: 9
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4e1fb95a93a459ea0800000000000000
+      internalID: -5866701328128151068
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_7
+      rect:
+        serializedVersion: 2
+        x: 868
+        y: 1196
+        width: 17
+        height: 16
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 532878dc04a2dc3e0800000000000000
+      internalID: -2031921399059742155
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_8
+      rect:
+        serializedVersion: 2
+        x: 1042
+        y: 1083
+        width: 84
+        height: 122
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5d8bbeda513080d0800000000000000
+      internalID: -3422681450447925922
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_9
+      rect:
+        serializedVersion: 2
+        x: 469
+        y: 1131
+        width: 50
+        height: 48
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa8633940429c14c0800000000000000
+      internalID: -4315413538124109654
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_10
+      rect:
+        serializedVersion: 2
+        x: 743
+        y: 1171
+        width: 19
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 11c17514e82160900800000000000000
+      internalID: 650227598392499217
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_11
+      rect:
+        serializedVersion: 2
+        x: 823
+        y: 1170
+        width: 38
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 30f570f77ea5976e0800000000000000
+      internalID: -1839339022489002237
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_12
+      rect:
+        serializedVersion: 2
+        x: 229
+        y: 937
+        width: 192
+        height: 186
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27b5c0f610e43ef90800000000000000
+      internalID: -6925606033900676238
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_13
+      rect:
+        serializedVersion: 2
+        x: 427
+        y: 1075
+        width: 29
+        height: 60
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 71a8e3532ddb065c0800000000000000
+      internalID: -4224167739939452393
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_14
+      rect:
+        serializedVersion: 2
+        x: 481
+        y: 1099
+        width: 50
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 07d98dd1290b05ae0800000000000000
+      internalID: -1562554929085112976
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_15
+      rect:
+        serializedVersion: 2
+        x: 716
+        y: 1095
+        width: 30
+        height: 46
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6b04296a05eb1bdd0800000000000000
+      internalID: -2471985466848427850
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_16
+      rect:
+        serializedVersion: 2
+        x: 807
+        y: 935
+        width: 195
+        height: 197
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 341c71d1932c30120800000000000000
+      internalID: 2378958578738774339
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_17
+      rect:
+        serializedVersion: 2
+        x: 748
+        y: 1050
+        width: 18
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 65fe3185244459dd0800000000000000
+      internalID: -2480000968061358250
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_18
+      rect:
+        serializedVersion: 2
+        x: 763
+        y: 1046
+        width: 23
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 252e0ac4977878200800000000000000
+      internalID: 182263264978199122
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_19
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 0
+        width: 1084
+        height: 1017
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e922703cd1cfbf4f0800000000000000
+      internalID: -793763704544484706
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_20
+      rect:
+        serializedVersion: 2
+        x: 1185
+        y: 931
+        width: 16
+        height: 57
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d057cb68bd9e0be00800000000000000
+      internalID: 1058603041499673869
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_21
+      rect:
+        serializedVersion: 2
+        x: 1189
+        y: 986
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9eaaa131069aa7880800000000000000
+      internalID: -8612385107290182935
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_22
+      rect:
+        serializedVersion: 2
+        x: 1034
+        y: 929
+        width: 86
+        height: 44
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2e7ab57d6feb587d0800000000000000
+      internalID: -2916715216268187678
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_23
+      rect:
+        serializedVersion: 2
+        x: 1113
+        y: 904
+        width: 37
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: caf791bf9aa4479b0800000000000000
+      internalID: -5083355985471766612
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_24
+      rect:
+        serializedVersion: 2
+        x: 32
+        y: 881
+        width: 10
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: afcd290fd44800210800000000000000
+      internalID: 1297182162966207738
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_25
+      rect:
+        serializedVersion: 2
+        x: 1181
+        y: 852
+        width: 18
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e012602273692a440800000000000000
+      internalID: 4945680504344420622
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_26
+      rect:
+        serializedVersion: 2
+        x: 932
+        y: 709
+        width: 210
+        height: 117
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d10c157d9fecd0f0800000000000000
+      internalID: -1090733550176828971
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_27
+      rect:
+        serializedVersion: 2
+        x: 1147
+        y: 662
+        width: 64
+        height: 70
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8950027ee235c5b30800000000000000
+      internalID: 4277385207006365080
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_28
+      rect:
+        serializedVersion: 2
+        x: 1036
+        y: 634
+        width: 39
+        height: 33
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 653f900f5616dd470800000000000000
+      internalID: 8420993968699470678
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_29
+      rect:
+        serializedVersion: 2
+        x: 1084
+        y: 648
+        width: 18
+        height: 42
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f03bceb8f00bbdea0800000000000000
+      internalID: -5846886110391913713
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_30
+      rect:
+        serializedVersion: 2
+        x: 1107
+        y: 533
+        width: 53
+        height: 132
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4cf7ec94ce80857a0800000000000000
+      internalID: -6388346260481474620
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_31
+      rect:
+        serializedVersion: 2
+        x: 1141
+        y: 622
+        width: 19
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d8888f4ba26bb3a0800000000000000
+      internalID: -6648611936969127722
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_32
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 637
+        width: 17
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 77439f6b28185f5e0800000000000000
+      internalID: -1876451271314426761
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_33
+      rect:
+        serializedVersion: 2
+        x: 1165
+        y: 662
+        width: 7
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 69e13b583b28d7030800000000000000
+      internalID: 3494092593463238294
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_34
+      rect:
+        serializedVersion: 2
+        x: 1064
+        y: 620
+        width: 13
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a9a47a081238bbae0800000000000000
+      internalID: -1532487068273915238
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_35
+      rect:
+        serializedVersion: 2
+        x: 1084
+        y: 610
+        width: 22
+        height: 27
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6bb49326e69fb430800000000000000
+      internalID: 3800922525707582317
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_36
+      rect:
+        serializedVersion: 2
+        x: 1082
+        y: 370
+        width: 18
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 825eb3b16086ad910800000000000000
+      internalID: 1862915771307124008
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_37
+      rect:
+        serializedVersion: 2
+        x: 1099
+        y: 379
+        width: 67
+        height: 77
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 861d08f5d44237c50800000000000000
+      internalID: 6661708188544455016
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_38
+      rect:
+        serializedVersion: 2
+        x: 1100
+        y: 361
+        width: 8
+        height: 8
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 62a24101a41fb9ad0800000000000000
+      internalID: -2694294651651479002
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_39
+      rect:
+        serializedVersion: 2
+        x: 1044
+        y: 191
+        width: 11
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5afd80c5266b9fa20800000000000000
+      internalID: 3096706752361062309
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_40
+      rect:
+        serializedVersion: 2
+        x: 1050
+        y: 199
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a3c16d29733584390800000000000000
+      internalID: -7833920053659165638
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_41
+      rect:
+        serializedVersion: 2
+        x: 1109
+        y: 84
+        width: 102
+        height: 153
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0949a596059ef3090800000000000000
+      internalID: -8052461077140958064
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_42
+      rect:
+        serializedVersion: 2
+        x: 28
+        y: 182
+        width: 24
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 58c51516dc9564880800000000000000
+      internalID: -8627109297545716603
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_43
+      rect:
+        serializedVersion: 2
+        x: 1038
+        y: 151
+        width: 47
+        height: 41
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b717992c432585e30800000000000000
+      internalID: 4492431014858682747
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_44
+      rect:
+        serializedVersion: 2
+        x: 1088
+        y: 164
+        width: 28
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 12f4a85aea0bee880800000000000000
+      internalID: -8579725975946113247
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_45
+      rect:
+        serializedVersion: 2
+        x: 1084
+        y: 169
+        width: 7
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aab4aec60a8c7a430800000000000000
+      internalID: 3794221802430548906
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_46
+      rect:
+        serializedVersion: 2
+        x: 1068
+        y: 122
+        width: 19
+        height: 24
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 3a67253ff69f8da40800000000000000
+      internalID: 5393334812995122851
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_47
+      rect:
+        serializedVersion: 2
+        x: 1117
+        y: 139
+        width: 19
+        height: 25
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2c35e0cc443b22100800000000000000
+      internalID: 81824851308729282
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_48
+      rect:
+        serializedVersion: 2
+        x: 63
+        y: 98
+        width: 9
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 81333567ef7ce4000800000000000000
+      internalID: 22174943904215832
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_49
+      rect:
+        serializedVersion: 2
+        x: 1050
+        y: 112
+        width: 8
+        height: 14
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0fbaec2115ae190d0800000000000000
+      internalID: -3417693008268710928
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_50
+      rect:
+        serializedVersion: 2
+        x: 1162
+        y: 84
+        width: 23
+        height: 50
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f30518e33a5244110800000000000000
+      internalID: 1244160780119658559
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_51
+      rect:
+        serializedVersion: 2
+        x: 1179
+        y: 118
+        width: 8
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: de4fe7e92aef324c0800000000000000
+      internalID: -4313324043693525779
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_52
+      rect:
+        serializedVersion: 2
+        x: 1141
+        y: 80
+        width: 11
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 03b9d07fdd75b3b70800000000000000
+      internalID: 8879787701135317808
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_53
+      rect:
+        serializedVersion: 2
+        x: 1155
+        y: 72
+        width: 13
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 63e1427c6d36c7270800000000000000
+      internalID: 8249578391551090230
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_54
+      rect:
+        serializedVersion: 2
+        x: 1175
+        y: 88
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5106a10caae84d5f0800000000000000
+      internalID: -732803975336009707
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_55
+      rect:
+        serializedVersion: 2
+        x: 1040
+        y: 63
+        width: 17
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d69fd7c2572951400800000000000000
+      internalID: 294302382617917805
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_56
+      rect:
+        serializedVersion: 2
+        x: 1157
+        y: 23
+        width: 38
+        height: 51
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: efcba4e764136d320800000000000000
+      internalID: 2582305615179857150
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_57
+      rect:
+        serializedVersion: 2
+        x: 475
+        y: 23
+        width: 16
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ca6d844bd7a26dc40800000000000000
+      internalID: 5536659511282554540
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Glossy Glowing Light Bulb Icon_58
+      rect:
+        serializedVersion: 2
+        x: 162
+        y: 7
+        width: 7
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData:
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 936ad511a00d02ec0800000000000000
+      internalID: -3593643760982055367
+      vertices: []
+      indices:
+      edges: []
+      weights: []
+    outline: []
+    customData:
+    physicsShape: []
+    bones: []
+    spriteID:
+    internalID: 0
+    vertices: []
+    indices:
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      Glossy Glowing Light Bulb Icon_0: -3397140447497159792
+      Glossy Glowing Light Bulb Icon_1: 4097714744882822629
+      Glossy Glowing Light Bulb Icon_10: 650227598392499217
+      Glossy Glowing Light Bulb Icon_11: -1839339022489002237
+      Glossy Glowing Light Bulb Icon_12: -6925606033900676238
+      Glossy Glowing Light Bulb Icon_13: -4224167739939452393
+      Glossy Glowing Light Bulb Icon_14: -1562554929085112976
+      Glossy Glowing Light Bulb Icon_15: -2471985466848427850
+      Glossy Glowing Light Bulb Icon_16: 2378958578738774339
+      Glossy Glowing Light Bulb Icon_17: -2480000968061358250
+      Glossy Glowing Light Bulb Icon_18: 182263264978199122
+      Glossy Glowing Light Bulb Icon_19: -793763704544484706
+      Glossy Glowing Light Bulb Icon_2: 9127056901442073668
+      Glossy Glowing Light Bulb Icon_20: 1058603041499673869
+      Glossy Glowing Light Bulb Icon_21: -8612385107290182935
+      Glossy Glowing Light Bulb Icon_22: -2916715216268187678
+      Glossy Glowing Light Bulb Icon_23: -5083355985471766612
+      Glossy Glowing Light Bulb Icon_24: 1297182162966207738
+      Glossy Glowing Light Bulb Icon_25: 4945680504344420622
+      Glossy Glowing Light Bulb Icon_26: -1090733550176828971
+      Glossy Glowing Light Bulb Icon_27: 4277385207006365080
+      Glossy Glowing Light Bulb Icon_28: 8420993968699470678
+      Glossy Glowing Light Bulb Icon_29: -5846886110391913713
+      Glossy Glowing Light Bulb Icon_3: -4585759677157877369
+      Glossy Glowing Light Bulb Icon_30: -6388346260481474620
+      Glossy Glowing Light Bulb Icon_31: -6648611936969127722
+      Glossy Glowing Light Bulb Icon_32: -1876451271314426761
+      Glossy Glowing Light Bulb Icon_33: 3494092593463238294
+      Glossy Glowing Light Bulb Icon_34: -1532487068273915238
+      Glossy Glowing Light Bulb Icon_35: 3800922525707582317
+      Glossy Glowing Light Bulb Icon_36: 1862915771307124008
+      Glossy Glowing Light Bulb Icon_37: 6661708188544455016
+      Glossy Glowing Light Bulb Icon_38: -2694294651651479002
+      Glossy Glowing Light Bulb Icon_39: 3096706752361062309
+      Glossy Glowing Light Bulb Icon_4: -2845635811999486475
+      Glossy Glowing Light Bulb Icon_40: -7833920053659165638
+      Glossy Glowing Light Bulb Icon_41: -8052461077140958064
+      Glossy Glowing Light Bulb Icon_42: -8627109297545716603
+      Glossy Glowing Light Bulb Icon_43: 4492431014858682747
+      Glossy Glowing Light Bulb Icon_44: -8579725975946113247
+      Glossy Glowing Light Bulb Icon_45: 3794221802430548906
+      Glossy Glowing Light Bulb Icon_46: 5393334812995122851
+      Glossy Glowing Light Bulb Icon_47: 81824851308729282
+      Glossy Glowing Light Bulb Icon_48: 22174943904215832
+      Glossy Glowing Light Bulb Icon_49: -3417693008268710928
+      Glossy Glowing Light Bulb Icon_5: -2923063927490813943
+      Glossy Glowing Light Bulb Icon_50: 1244160780119658559
+      Glossy Glowing Light Bulb Icon_51: -4313324043693525779
+      Glossy Glowing Light Bulb Icon_52: 8879787701135317808
+      Glossy Glowing Light Bulb Icon_53: 8249578391551090230
+      Glossy Glowing Light Bulb Icon_54: -732803975336009707
+      Glossy Glowing Light Bulb Icon_55: 294302382617917805
+      Glossy Glowing Light Bulb Icon_56: 2582305615179857150
+      Glossy Glowing Light Bulb Icon_57: 5536659511282554540
+      Glossy Glowing Light Bulb Icon_58: -3593643760982055367
+      Glossy Glowing Light Bulb Icon_6: -5866701328128151068
+      Glossy Glowing Light Bulb Icon_7: -2031921399059742155
+      Glossy Glowing Light Bulb Icon_8: -3422681450447925922
+      Glossy Glowing Light Bulb Icon_9: -4315413538124109654
+  mipmapLimitGroupName:
+  pSDRemoveMatte: 0
+  userData:
+  assetBundleName:
+  assetBundleVariant:
