@@ -12,7 +12,7 @@ public class SnakeController : MonoBehaviour
     public Color hintColor = new Color(0.08f, 0.78f, 0.36f);     // Hint Green
 
     public float lineWidth = 0.14f;
-    public float slitherSpeed = 17f;
+    public float slitherSpeed = 11f;
 
     [HideInInspector] public bool isMoving = false;
     [HideInInspector] public bool isCleared = false;
@@ -48,7 +48,7 @@ public class SnakeController : MonoBehaviour
         lr.material = sharedSmoothLineMat;
         lr.textureMode = LineTextureMode.Stretch;
         lr.useWorldSpace = true;
-        lr.numCapVertices = 12;
+        lr.numCapVertices = 16;
         lr.numCornerVertices = 12;
         lr.sortingOrder = 5;
 
@@ -56,9 +56,9 @@ public class SnakeController : MonoBehaviour
         taper.AddKey(0.00f, 0.76f);
         taper.AddKey(0.07f, 1.00f);
         taper.AddKey(0.75f, 0.96f);
-        taper.AddKey(0.90f, 0.58f);
-        taper.AddKey(0.97f, 0.25f);
-        taper.AddKey(1.00f, 0.06f);
+        taper.AddKey(0.88f, 0.78f);
+        taper.AddKey(0.95f, 0.34f);
+        taper.AddKey(1.00f, 0.02f);
 
         lr.widthCurve = taper;
         lr.widthMultiplier = lineWidth;
@@ -235,6 +235,19 @@ public class SnakeController : MonoBehaviour
         return (currentWaypoints[0] - currentWaypoints[1]).normalized;
     }
 
+    public void EraseImmediately()
+    {
+        if (isMoving || isCleared) return;
+
+        isCleared = true;
+        if (GameManager.Instance != null)
+        {
+            GameManager.Instance.RevealDotsAlongSnake(baseWaypoints);
+            GameManager.Instance.OnSnakeCleared(this);
+        }
+        Destroy(gameObject);
+    }
+
     public void TriggerTap()
     {
         if (isMoving || isCleared || GameManager.Instance.isPaused) return;
@@ -269,7 +282,11 @@ public class SnakeController : MonoBehaviour
             }
 
             SetColor(hitColor);
-            if (GameManager.Instance != null) GameManager.Instance.OnMistake();
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.PlayBlockedSound();
+                GameManager.Instance.OnMistake();
+            }
 
             GameObject impactDot = SpawnImpactCircle(currentWaypoints[0] + fwd * (lineWidth * 0.45f));
 
@@ -317,6 +334,7 @@ public class SnakeController : MonoBehaviour
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.TriggerHaptic(false);
+                GameManager.Instance.PlayEscapeSound();
                 GameManager.Instance.OnSnakeCleared(this);
                 GameManager.Instance.RevealDotsAlongSnake(baseWaypoints);
             }

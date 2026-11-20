@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     public int remainingGridGuides = 1;
     public int playerCoins = 760;
     public bool hapticsEnabled = true;
+    public bool soundEffectsEnabled = true;
     [HideInInspector] public bool isPaused = false;
     [HideInInspector] public bool isChallengeMode = false;
 
@@ -51,24 +52,53 @@ public class GameManager : MonoBehaviour
     private int lockedLevelSeed = 0;
     private int lastGeneratedLevel = -1;
     private int challengeRunCount = 0;
+    private int eraserFreeUseLevel;
     private int levelGeneration = 0;
     private bool isCurrentChallengeUnlocked = false;
     private PlayerSaveService playerSaveService;
+    private LegacyAudioFeedback audioFeedback;
+    private TextMeshProUGUI soundEffectsToggleBtnText;
+    private Canvas responsiveCanvas;
+    private CanvasScaler responsiveCanvasScaler;
+    private readonly List<SafeAreaAnchor> safeAreaAnchors = new List<SafeAreaAnchor>();
+    private int lastLayoutScreenWidth = -1;
+    private int lastLayoutScreenHeight = -1;
+    private Rect lastLayoutSafeArea;
+    private float lastLayoutScaleFactor = -1f;
+    private bool lastLayoutWasLandscape;
+
+    private sealed class SafeAreaAnchor
+    {
+        public RectTransform rectTransform;
+        public Vector2 basePosition;
+        public Vector2 anchorPoint;
+    }
 
     // Milestone & Timer State (3 Minutes = 180s)
     private int initialSnakeCountInLevel = 0;
-    private bool halfLevelMilestoneShown = false;
     private bool isTimerActive = false;
     private float timeRemaining = 0f;
     private float totalTimerDuration = 180f;
     private bool halfTimePopupShown = false;
     private bool isGridGuideActiveThisLevel = false;
+    private bool isBoardGridVisible;
+    private bool isEraserSelectionActive;
+    private bool pendingFreeEraserUse;
+    private int pendingEraserCoinCost;
     private GameObject timerPillObj;
     private TextMeshProUGUI timerText;
+    private Image levelProgressFill;
+    private float targetLevelProgress;
 
     // Dynamic UI Text References
     private TextMeshProUGUI hintBadgeText;
     private TextMeshProUGUI gridBadgeText;
+    private Sprite eraserIconSprite;
+    private Image eraserButtonBackground;
+    private TextMeshProUGUI eraserBadgeText;
+    private TextMeshProUGUI gridGuideCoinButtonText;
+    private Button eraserFreeButton;
+    private TextMeshProUGUI eraserCoinButtonText;
     private TextMeshProUGUI homeContinueBtnText;
     private TextMeshProUGUI homeCoinText;
     private TextMeshProUGUI challengeEntryCoinText;
@@ -95,7 +125,7 @@ public class GameManager : MonoBehaviour
     private GameObject hintAdModalObj;
     private GameObject gridGuideAdModalObj;
     private GameObject halfTimeAdModalObj;
-    private GameObject halfLevelMilestoneModalObj;
+    private GameObject eraserModalObj;
     private GameObject adSimOverlayObj;
     private TextMeshProUGUI adSimTimerText;
 
@@ -178,8 +208,14 @@ public class GameManager : MonoBehaviour
         remainingGridGuides = savedProgress.gridGuides;
         playerCoins = savedProgress.coins;
         challengeRunCount = savedProgress.challengeRunCount;
+        eraserFreeUseLevel = savedProgress.eraserFreeUseLevel;
         isCurrentChallengeUnlocked = savedProgress.challengeUnlocked;
         hapticsEnabled = savedProgress.hapticsEnabled;
+        soundEffectsEnabled = savedProgress.soundEffectsEnabled;
+        audioFeedback = GetComponent<LegacyAudioFeedback>();
+        if (audioFeedback == null)
+            audioFeedback = gameObject.AddComponent<LegacyAudioFeedback>();
+        audioFeedback.SetEnabled(soundEffectsEnabled);
     }
 
     void Start()
@@ -187,6 +223,7 @@ public class GameManager : MonoBehaviour
         SetupCamera();
         AutoFixAndStyleCanvasUI();
         LoadLevel(currentLevel);
+        OpenHomeScreen();
     }
 
     void SaveProgress()
@@ -209,8 +246,10 @@ public class GameManager : MonoBehaviour
             gridGuides = remainingGridGuides,
             coins = playerCoins,
             challengeRunCount = challengeRunCount,
+            eraserFreeUseLevel = eraserFreeUseLevel,
             challengeUnlocked = isCurrentChallengeUnlocked,
-            hapticsEnabled = hapticsEnabled
+            hapticsEnabled = hapticsEnabled,
+            soundEffectsEnabled = soundEffectsEnabled
         });
     }
 
@@ -223,6 +262,24 @@ public class GameManager : MonoBehaviour
 #endif
     }
 
+    public void PlayBlockedSound()
+    {
+        if (audioFeedback != null)
+            audioFeedback.PlayBlocked();
+    }
+
+    void PlayButtonSound()
+    {
+        if (audioFeedback != null)
+            audioFeedback.PlayButton();
+    }
+
+    public void PlayEscapeSound()
+    {
+        if (audioFeedback != null)
+            audioFeedback.PlayEscape();
+    }
+
     void AddCoins(int amount)
     {
         playerCoins = (int)System.Math.Min(int.MaxValue, (long)playerCoins + amount);
@@ -232,6 +289,11 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+        UpdateResponsiveCanvasLayout();
+        if (levelProgressFill != null)
+            levelProgressFill.fillAmount = Mathf.MoveTowards(
+                levelProgressFill.fillAmount, targetLevelProgress, Time.unscaledDeltaTime * 0.45f);
+
         for (int i = 0; i < activeSunburstRays.Count; i++)
         {
             if (activeSunburstRays[i] != null && activeSunburstRays[i].gameObject.activeInHierarchy)
@@ -297,7 +359,13 @@ public class GameManager : MonoBehaviour
                 }
             }
 
-            if (closestSnake != null) closestSnake.TriggerTap();
+            if (closestSnake != null)
+            {
+                if (isEraserSelectionActive)
+                    EraseSelectedSnake(closestSnake);
+                else
+                    closestSnake.TriggerTap();
+            }
         }
     }
 
@@ -406,7 +474,7 @@ public class GameManager : MonoBehaviour
         {
             cs.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             cs.referenceResolution = new Vector2(1080, 1920);
-            cs.matchWidthOrHeight = 0.5f;
+            cs.matchWidthOrHeight = Screen.width > Screen.height ? 1f : 0.5f;
         }
 
         string[] unwantedHUD = { "TopRestartButton", "TopCoinWallet", "BottomChallengeBtn", "ChallengeHubModal" };
@@ -441,6 +509,7 @@ public class GameManager : MonoBehaviour
         calendarBadgeSprite = CreateCalendarIconSprite(128);
         friendsTrophySprite = CreateTrophyIconSprite(128);
         gridGuideButtonSprite = CreateGridGuideRulerButtonSprite(256);
+        eraserIconSprite = CreateEraserIconSprite(256);
         rulerBigIconSprite = CreateBigPurpleRulerSprite(256);
         gearIconSprite = settingsAssetSprite != null ? settingsAssetSprite : CreateGearIconSprite(128);
 
@@ -545,8 +614,9 @@ public class GameManager : MonoBehaviour
 
         // 5. Clean Top-Left Pause, Top-Right Settings & 3-Min Timer Pill
         SetupCleanGameplayHUD(canvasObj.transform);
+        SetupLevelProgressBar(canvasObj.transform);
 
-        // 6. Bottom Bar: Hint Button (Left) + Grid Guide Ruler Button (Right) (Point 6!)
+        // 6. Bottom Bar: Hint, grid visibility, and Grid Guide controls.
         SetupBottomHintAndGridGuideButtons(canvasObj.transform);
 
         // 7. Build All Yellow-Sunburst Popups & Screens
@@ -558,7 +628,7 @@ public class GameManager : MonoBehaviour
         BuildGetHintAdModal(canvasObj.transform);
         BuildGetGridGuideAdModal(canvasObj.transform);
         BuildHalfTimeRemoveTimerModal(canvasObj.transform);
-        BuildHalfLevelMilestoneModal(canvasObj.transform);
+        BuildEraserModal(canvasObj.transform);
         BuildHomeScreen(canvasObj.transform);
         BuildDailyChallengeEntryModal(canvasObj.transform);
         BuildMultiplayerComingSoonModal(canvasObj.transform);
@@ -576,6 +646,93 @@ public class GameManager : MonoBehaviour
         vigRt.anchorMin = Vector2.zero;
         vigRt.anchorMax = Vector2.one;
         vigRt.sizeDelta = Vector2.zero;
+
+        responsiveCanvas = c;
+        responsiveCanvasScaler = cs;
+        safeAreaAnchors.Clear();
+        RegisterSafeAreaAnchors(canvasObj.transform as RectTransform);
+        lastLayoutScreenWidth = -1;
+        UpdateResponsiveCanvasLayout();
+
+        foreach (Button button in canvasObj.GetComponentsInChildren<Button>(true))
+            button.onClick.AddListener(PlayButtonSound);
+    }
+
+    void UpdateResponsiveCanvasLayout()
+    {
+        if (responsiveCanvas == null || responsiveCanvasScaler == null)
+            return;
+
+        bool isLandscape = Screen.width > Screen.height;
+        if (isLandscape != lastLayoutWasLandscape)
+        {
+            responsiveCanvasScaler.matchWidthOrHeight = isLandscape ? 1f : 0.5f;
+            lastLayoutWasLandscape = isLandscape;
+            Canvas.ForceUpdateCanvases();
+        }
+
+        Rect safeArea = Screen.safeArea;
+        if (safeArea.width <= 0f || safeArea.height <= 0f)
+            safeArea = new Rect(0f, 0f, Screen.width, Screen.height);
+
+        float scaleFactor = Mathf.Max(0.0001f, responsiveCanvas.scaleFactor);
+        if (lastLayoutScreenWidth == Screen.width
+            && lastLayoutScreenHeight == Screen.height
+            && lastLayoutSafeArea == safeArea
+            && Mathf.Approximately(lastLayoutScaleFactor, scaleFactor))
+            return;
+
+        float leftInset = safeArea.xMin / scaleFactor;
+        float rightInset = (Screen.width - safeArea.xMax) / scaleFactor;
+        float bottomInset = safeArea.yMin / scaleFactor;
+        float topInset = (Screen.height - safeArea.yMax) / scaleFactor;
+
+        for (int i = safeAreaAnchors.Count - 1; i >= 0; i--)
+        {
+            SafeAreaAnchor anchor = safeAreaAnchors[i];
+            if (anchor.rectTransform == null)
+            {
+                safeAreaAnchors.RemoveAt(i);
+                continue;
+            }
+
+            Vector2 inset = new Vector2(
+                Mathf.Lerp(leftInset, -rightInset, anchor.anchorPoint.x),
+                Mathf.Lerp(bottomInset, -topInset, anchor.anchorPoint.y));
+            anchor.rectTransform.anchoredPosition = anchor.basePosition + inset;
+        }
+
+        lastLayoutScreenWidth = Screen.width;
+        lastLayoutScreenHeight = Screen.height;
+        lastLayoutSafeArea = safeArea;
+        lastLayoutScaleFactor = scaleFactor;
+    }
+
+    void RegisterSafeAreaAnchors(RectTransform fullScreenParent)
+    {
+        if (fullScreenParent == null)
+            return;
+
+        for (int i = 0; i < fullScreenParent.childCount; i++)
+        {
+            RectTransform child = fullScreenParent.GetChild(i) as RectTransform;
+            if (child == null)
+                continue;
+
+            bool fillsParent = child.anchorMin == Vector2.zero && child.anchorMax == Vector2.one;
+            if (!fillsParent && child.anchorMin == child.anchorMax)
+            {
+                safeAreaAnchors.Add(new SafeAreaAnchor
+                {
+                    rectTransform = child,
+                    basePosition = child.anchoredPosition,
+                    anchorPoint = child.anchorMin
+                });
+            }
+
+            if (fillsParent)
+                RegisterSafeAreaAnchors(child);
+        }
     }
 
     void SetupCleanGameplayHUD(Transform canvasTr)
@@ -660,36 +817,33 @@ public class GameManager : MonoBehaviour
             rt.anchorMin = new Vector2(0.5f, 0f);
             rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(-135f, 185f);
-            rt.sizeDelta = new Vector2(184f, 184f);
+            rt.anchoredPosition = new Vector2(-310f, 185f);
+            rt.sizeDelta = new Vector2(160f, 160f);
 
             for (int i = hintButton.transform.childCount - 1; i >= 0; i--)
                 Destroy(hintButton.transform.GetChild(i).gameObject);
 
             Image btnImg = hintButton.GetComponent<Image>();
             if (btnImg == null) btnImg = hintButton.gameObject.AddComponent<Image>();
-            btnImg.sprite = CreateArrowPuzzleHintButtonSprite(256);
+            btnImg.sprite = CreateArrowPuzzleHintButtonSprite(256, true, false);
             btnImg.color = Color.white;
             btnImg.preserveAspect = true;
 
-            GameObject bTxtObj = new GameObject("HintBadgeText");
-            bTxtObj.transform.SetParent(hintButton.transform, false);
-            hintBadgeText = bTxtObj.AddComponent<TextMeshProUGUI>();
-            StyleBoldTMP(hintBadgeText, 26f, Color.white);
-            RectTransform bRt = bTxtObj.GetComponent<RectTransform>();
-            bRt.anchorMin = new Vector2(0.5f, 0.5f);
-            bRt.anchorMax = new Vector2(0.5f, 0.5f);
-            bRt.anchoredPosition = new Vector2(46f, 46f);
-            bRt.sizeDelta = new Vector2(70f, 42f);
+            hintBadgeText = CreateHudCountBadge(hintButton.transform, "HintCountBadge", new Vector2(160f, 160f));
 
             hintButton.onClick.RemoveAllListeners();
             hintButton.onClick.AddListener(() => { TriggerHaptic(false); GiveHint(); });
         }
 
-        // Right Side: Purple Ruler Grid Guide Button (exact match to 80789f93...jpg & image (6).jpg!)
+        Transform oldGridToggle = canvasTr.Find("GridToggleButton");
+        if (oldGridToggle != null) Destroy(oldGridToggle.gameObject);
+
         Transform oldGridBtn = canvasTr.Find("GridGuideButton");
         if (oldGridBtn != null) Destroy(oldGridBtn.gameObject);
+        Transform oldEraserButton = canvasTr.Find("EraserButton");
+        if (oldEraserButton != null) Destroy(oldEraserButton.gameObject);
 
+        // Keep the ruler as the grid control; it also toggles a grid guide already used this level.
         GameObject gridBtnObj = new GameObject("GridGuideButton");
         gridBtnObj.transform.SetParent(canvasTr, false);
         Button gridBtn = gridBtnObj.AddComponent<Button>();
@@ -702,20 +856,16 @@ public class GameManager : MonoBehaviour
         gRt.anchorMin = new Vector2(0.5f, 0f);
         gRt.anchorMax = new Vector2(0.5f, 0f);
         gRt.pivot = new Vector2(0.5f, 0.5f);
-        gRt.anchoredPosition = new Vector2(135f, 185f);
-        gRt.sizeDelta = new Vector2(184f, 184f);
+        gRt.anchoredPosition = new Vector2(310f, 185f);
+        gRt.sizeDelta = new Vector2(160f, 160f);
 
-        GameObject gTxtObj = new GameObject("GridBadgeText");
-        gTxtObj.transform.SetParent(gridBtnObj.transform, false);
-        gridBadgeText = gTxtObj.AddComponent<TextMeshProUGUI>();
-        StyleBoldTMP(gridBadgeText, 26f, Color.white);
-        RectTransform gbRt = gTxtObj.GetComponent<RectTransform>();
-        gbRt.anchorMin = new Vector2(0.5f, 0.5f);
-        gbRt.anchorMax = new Vector2(0.5f, 0.5f);
-        gbRt.anchoredPosition = new Vector2(46f, 46f);
-        gbRt.sizeDelta = new Vector2(70f, 42f);
+        gridBadgeText = CreateHudCountBadge(gridBtnObj.transform, "GridCountBadge", new Vector2(160f, 160f));
 
         gridBtn.onClick.AddListener(() => { TriggerHaptic(false); UseGridGuide(); });
+
+        CreateEraserIconButton(
+            canvasTr, "EraserButton", new Vector2(0f, 185f), new Vector2(160f, 160f),
+            OnEraserButtonPressed, out eraserButtonBackground, out eraserBadgeText);
 
         Transform oldZoomBtn = canvasTr.Find("ResetZoomBtn");
         if (oldZoomBtn != null) Destroy(oldZoomBtn.gameObject);
@@ -731,6 +881,50 @@ public class GameManager : MonoBehaviour
         UpdateCoinAndHintUI();
     }
 
+    void SetupLevelProgressBar(Transform canvasTr)
+    {
+        Transform existing = canvasTr.Find("LevelProgressBar");
+        if (existing != null) Destroy(existing.gameObject);
+
+        GameObject background = new GameObject("LevelProgressBar");
+        background.transform.SetParent(canvasTr, false);
+        Image backgroundImage = background.AddComponent<Image>();
+        backgroundImage.sprite = pillSprite;
+        backgroundImage.type = Image.Type.Sliced;
+        backgroundImage.color = new Color(0.84f, 0.88f, 0.94f, 1f);
+        backgroundImage.raycastTarget = false;
+        RectTransform backgroundRect = background.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = new Vector2(0f, 1f);
+        backgroundRect.anchorMax = new Vector2(0f, 1f);
+        backgroundRect.pivot = new Vector2(0.5f, 0.5f);
+        backgroundRect.anchoredPosition = new Vector2(142f, -282f);
+        backgroundRect.sizeDelta = new Vector2(204f, 22f);
+
+        GameObject fill = new GameObject("Fill");
+        fill.transform.SetParent(background.transform, false);
+        levelProgressFill = fill.AddComponent<Image>();
+        levelProgressFill.sprite = pillSprite;
+        levelProgressFill.color = new Color(0.14f, 0.52f, 0.98f, 1f);
+        levelProgressFill.raycastTarget = false;
+        levelProgressFill.type = Image.Type.Filled;
+        levelProgressFill.fillMethod = Image.FillMethod.Horizontal;
+        levelProgressFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+        levelProgressFill.fillAmount = 0f;
+        RectTransform fillRect = fill.GetComponent<RectTransform>();
+        fillRect.anchorMin = Vector2.zero;
+        fillRect.anchorMax = Vector2.one;
+        fillRect.sizeDelta = Vector2.zero;
+        fillRect.anchoredPosition = Vector2.zero;
+    }
+
+    void ResetBoardGrid()
+    {
+        if (gridGuideLinesContainer != null)
+            Destroy(gridGuideLinesContainer);
+        gridGuideLinesContainer = null;
+        isBoardGridVisible = false;
+    }
+
     void UpdateCoinAndHintUI()
     {
         if (homeCoinText != null) homeCoinText.text = playerCoins.ToString();
@@ -738,6 +932,7 @@ public class GameManager : MonoBehaviour
             hintBadgeText.text = remainingHints > 0 ? remainingHints.ToString() : "+";
         if (gridBadgeText != null)
             gridBadgeText.text = remainingGridGuides > 0 ? remainingGridGuides.ToString() : "+";
+        UpdateEraserAvailabilityUI();
     }
 
     void UpdateTimerUI()
@@ -758,7 +953,7 @@ public class GameManager : MonoBehaviour
         img.color = Color.white;
 
         Shadow sh = card.AddComponent<Shadow>();
-        sh.effectColor = new Color(0.25f, 0.14f, 0.02f, 0.32f);
+        sh.effectColor = new Color(0.08f, 0.18f, 0.34f, 0.22f);
         sh.effectDistance = new Vector2(0f, -14f);
 
         RectTransform rt = card.GetComponent<RectTransform>();
@@ -770,7 +965,7 @@ public class GameManager : MonoBehaviour
         rays.transform.SetParent(card.transform, false);
         Image rImg = rays.AddComponent<Image>();
         rImg.sprite = sunburstRaysOverlaySprite;
-        rImg.color = new Color(1f, 1f, 0.85f, 0.28f);
+        rImg.color = new Color(0.80f, 0.90f, 1f, 0.22f);
         rImg.raycastTarget = false;
         RectTransform rRt = rays.GetComponent<RectTransform>();
         rRt.sizeDelta = new Vector2(size.x * 0.92f, size.x * 0.92f);
@@ -887,7 +1082,7 @@ public class GameManager : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        GameObject card = CreateYellowSunburstModalCard(settingsModalObj.transform, "SettingsCard", new Vector2(820f, 640f));
+        GameObject card = CreateYellowSunburstModalCard(settingsModalObj.transform, "SettingsCard", new Vector2(820f, 760f));
 
         GameObject tObj = new GameObject("Title");
         tObj.transform.SetParent(card.transform, false);
@@ -895,10 +1090,22 @@ public class GameManager : MonoBehaviour
         tt.text = "Settings";
         StyleBoldTMP(tt, 56f, new Color(0.12f, 0.07f, 0.02f));
         RectTransform tRt = tObj.GetComponent<RectTransform>();
-        tRt.anchoredPosition = new Vector2(0f, 195f);
+        tRt.anchoredPosition = new Vector2(0f, 285f);
         tRt.sizeDelta = new Vector2(680f, 85f);
 
-        GameObject hapBtn = CreatePillButton(card.transform, "HapticsBtn", hapticsEnabled ? "Haptics (Vibration): ON" : "Haptics (Vibration): OFF", new Color(0.14f, 0.76f, 0.38f), Color.white, new Vector2(0f, 35f), new Vector2(660f, 125f), 38f, false);
+        GameObject soundBtn = CreatePillButton(card.transform, "SoundEffectsBtn", soundEffectsEnabled ? "Sound Effects: ON" : "Sound Effects: OFF", new Color(0.14f, 0.52f, 0.98f), Color.white, new Vector2(0f, 115f), new Vector2(660f, 115f), 36f, false);
+        soundEffectsToggleBtnText = soundBtn.GetComponentInChildren<TextMeshProUGUI>();
+        soundBtn.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            soundEffectsEnabled = !soundEffectsEnabled;
+            if (audioFeedback != null)
+                audioFeedback.SetEnabled(soundEffectsEnabled);
+            SaveProgress();
+            if (soundEffectsToggleBtnText != null)
+                soundEffectsToggleBtnText.text = soundEffectsEnabled ? "Sound Effects: ON" : "Sound Effects: OFF";
+        });
+
+        GameObject hapBtn = CreatePillButton(card.transform, "HapticsBtn", hapticsEnabled ? "Haptics (Vibration): ON" : "Haptics (Vibration): OFF", new Color(0.14f, 0.76f, 0.38f), Color.white, new Vector2(0f, -35f), new Vector2(660f, 115f), 36f, false);
         hapticsToggleBtnText = hapBtn.GetComponentInChildren<TextMeshProUGUI>();
         hapBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
@@ -909,7 +1116,7 @@ public class GameManager : MonoBehaviour
             TriggerHaptic(false);
         });
 
-        GameObject homeBtn = CreatePillButton(card.transform, "GoHomeBtn", "Main Menu", Color.white, new Color(0.14f, 0.50f, 0.98f), new Vector2(0f, -110f), new Vector2(660f, 120f), 40f, false);
+        GameObject homeBtn = CreatePillButton(card.transform, "GoHomeBtn", "Main Menu", Color.white, new Color(0.14f, 0.50f, 0.98f), new Vector2(0f, -190f), new Vector2(660f, 115f), 38f, false);
         homeBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             TriggerHaptic(false);
@@ -917,7 +1124,7 @@ public class GameManager : MonoBehaviour
             OpenHomeScreen();
         });
 
-        GameObject closeBtn = CreateBorderlessTextButton(card.transform, "CloseSetBtn", "Close", new Color(0.16f, 0.10f, 0.02f), new Vector2(0f, -235f), new Vector2(400f, 75f), 38f);
+        GameObject closeBtn = CreateBorderlessTextButton(card.transform, "CloseSetBtn", "Close", new Color(0.16f, 0.10f, 0.02f), new Vector2(0f, -320f), new Vector2(400f, 75f), 38f);
         closeBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             TriggerHaptic(false);
@@ -1157,20 +1364,22 @@ public class GameManager : MonoBehaviour
         tObj.transform.SetParent(card.transform, false);
         TextMeshProUGUI tt = tObj.AddComponent<TextMeshProUGUI>();
         tt.text = "Get a Hint";
-        StyleBoldTMP(tt, 56f, new Color(0.12f, 0.07f, 0.02f));
+        StyleBoldTMP(tt, 54f, new Color(0.12f, 0.07f, 0.02f));
         RectTransform tRt = tObj.GetComponent<RectTransform>();
         tRt.anchoredPosition = new Vector2(0f, 260f);
-        tRt.sizeDelta = new Vector2(640f, 85f);
+        tRt.sizeDelta = new Vector2(720f, 85f);
 
         GameObject bulbIconObj = new GameObject("BulbPreview");
         bulbIconObj.transform.SetParent(card.transform, false);
         Image bImg = bulbIconObj.AddComponent<Image>();
-        bImg.sprite = CreateArrowPuzzleHintButtonSprite(256);
+        bImg.sprite = CreateArrowPuzzleHintButtonSprite(256, false, false);
+        bImg.preserveAspect = true;
+        bImg.raycastTarget = false;
         RectTransform bRt = bulbIconObj.GetComponent<RectTransform>();
         bRt.anchoredPosition = new Vector2(0f, 85f);
-        bRt.sizeDelta = new Vector2(210f, 210f);
+        bRt.sizeDelta = new Vector2(220f, 220f);
 
-        GameObject adBtn = CreatePillButton(card.transform, "WatchAdHintBtn", "Get x1", new Color(0.18f, 0.78f, 0.18f), Color.white, new Vector2(0f, -85f), new Vector2(660f, 125f), 44f, true);
+        GameObject adBtn = CreatePillButton(card.transform, "WatchAdHintBtn", "Watch Video Ad", new Color(0.18f, 0.68f, 0.30f), Color.white, new Vector2(0f, -85f), new Vector2(660f, 125f), 40f, true);
         adBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             PlaySimulatedVideoAd(() =>
@@ -1184,7 +1393,7 @@ public class GameManager : MonoBehaviour
             });
         });
 
-        GameObject coinBtn = CreatePillButton(card.transform, "CoinHintBtn", "Get x3 (500 Coins)", Color.white, new Color(0.12f, 0.46f, 0.96f), new Vector2(0f, -225f), new Vector2(660f, 120f), 40f, false);
+        GameObject coinBtn = CreatePillButton(card.transform, "CoinHintBtn", "Get x3 (500 Coins)", Color.white, new Color(0.12f, 0.46f, 0.96f), new Vector2(0f, -225f), new Vector2(660f, 120f), 38f, false);
         coinBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             if (playerCoins >= 500)
@@ -1241,11 +1450,12 @@ public class GameManager : MonoBehaviour
         Image rImg = rulerObj.AddComponent<Image>();
         rImg.sprite = rulerBigIconSprite;
         rImg.preserveAspect = true;
+        rImg.raycastTarget = false;
         RectTransform rRt = rulerObj.GetComponent<RectTransform>();
         rRt.anchoredPosition = new Vector2(0f, 85f);
         rRt.sizeDelta = new Vector2(220f, 220f);
 
-        GameObject adBtn = CreatePillButton(card.transform, "WatchAdGridBtn", "Get x1", new Color(0.18f, 0.78f, 0.18f), Color.white, new Vector2(0f, -85f), new Vector2(660f, 125f), 44f, true);
+        GameObject adBtn = CreatePillButton(card.transform, "WatchAdGridBtn", "Watch Video Ad", new Color(0.18f, 0.68f, 0.30f), Color.white, new Vector2(0f, -85f), new Vector2(660f, 125f), 40f, true);
         adBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             PlaySimulatedVideoAd(() =>
@@ -1259,18 +1469,23 @@ public class GameManager : MonoBehaviour
             });
         });
 
-        GameObject coinBtn = CreatePillButton(card.transform, "CoinGridBtn", "Get x5 (150 Coins)", Color.white, new Color(0.12f, 0.46f, 0.96f), new Vector2(0f, -225f), new Vector2(660f, 120f), 40f, false);
+        GameObject coinBtn = CreatePillButton(card.transform, "CoinGridBtn", "Get Grid Guide (100 Coins)", Color.white, new Color(0.12f, 0.46f, 0.96f), new Vector2(0f, -225f), new Vector2(660f, 120f), 38f, false);
+        gridGuideCoinButtonText = coinBtn.GetComponentInChildren<TextMeshProUGUI>();
         coinBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
-            if (playerCoins >= 150)
+            if (playerCoins >= 100)
             {
-                playerCoins -= 150;
-                remainingGridGuides += 5;
+                playerCoins -= 100;
+                remainingGridGuides += 1;
                 SaveProgress();
                 UpdateCoinAndHintUI();
                 gridGuideAdModalObj.SetActive(false);
                 isPaused = false;
                 UseGridGuide();
+            }
+            else if (gridGuideCoinButtonText != null)
+            {
+                gridGuideCoinButtonText.text = $"Need 100 Coins ({playerCoins})";
             }
         });
 
@@ -1342,53 +1557,6 @@ public class GameManager : MonoBehaviour
         halfTimeAdModalObj.SetActive(false);
     }
 
-    // Point 10: 50% Level Completed Milestone Popup!
-    void BuildHalfLevelMilestoneModal(Transform canvasTr)
-    {
-        Transform existing = canvasTr.Find("HalfLevelMilestoneModal");
-        if (existing != null) Destroy(existing.gameObject);
-
-        halfLevelMilestoneModalObj = new GameObject("HalfLevelMilestoneModal");
-        halfLevelMilestoneModalObj.transform.SetParent(canvasTr, false);
-
-        Image bg = halfLevelMilestoneModalObj.AddComponent<Image>();
-        bg.color = new Color(0.04f, 0.08f, 0.16f, 0.55f);
-        RectTransform rt = halfLevelMilestoneModalObj.GetComponent<RectTransform>();
-        rt.anchorMin = Vector2.zero;
-        rt.anchorMax = Vector2.one;
-        rt.sizeDelta = Vector2.zero;
-
-        GameObject card = CreateYellowSunburstModalCard(halfLevelMilestoneModalObj.transform, "MilestoneCard", new Vector2(800f, 580f));
-
-        GameObject icObj = new GameObject("CrownIcon");
-        icObj.transform.SetParent(card.transform, false);
-        Image icImg = icObj.AddComponent<Image>();
-        icImg.sprite = winnerIconSprite;
-        icImg.preserveAspect = true;
-        RectTransform icRt = icObj.GetComponent<RectTransform>();
-        icRt.anchoredPosition = new Vector2(0f, 130f);
-        icRt.sizeDelta = new Vector2(150f, 150f);
-
-        GameObject tObj = new GameObject("Title");
-        tObj.transform.SetParent(card.transform, false);
-        TextMeshProUGUI tt = tObj.AddComponent<TextMeshProUGUI>();
-        tt.text = "50% Completed!";
-        StyleBoldTMP(tt, 54f, new Color(0.12f, 0.07f, 0.02f));
-        RectTransform tRt = tObj.GetComponent<RectTransform>();
-        tRt.anchoredPosition = new Vector2(0f, -10f);
-        tRt.sizeDelta = new Vector2(720f, 80f);
-
-        GameObject contBtn = CreatePillButton(card.transform, "KeepGoingBtn", "Keep Going!", new Color(0.14f, 0.52f, 0.98f), Color.white, new Vector2(0f, -155f), new Vector2(560f, 120f), 42f, false);
-        contBtn.GetComponent<Button>().onClick.AddListener(() =>
-        {
-            TriggerHaptic(false);
-            halfLevelMilestoneModalObj.SetActive(false);
-            isPaused = false;
-        });
-
-        halfLevelMilestoneModalObj.SetActive(false);
-    }
-
     // Point 2: Home Screen Layout Order:
     // Top Center Coins Wallet -> Top/Bottom Corner Settings Button -> "Snake Puzzle" Heading -> Center 2 Cards -> Continue Game -> Restart Game!
     void BuildHomeScreen(Transform canvasTr)
@@ -1454,7 +1622,7 @@ public class GameManager : MonoBehaviour
         StyleBoldTMP(pct, 38f, Color.white);
         pcTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(58f, 58f);
 
-        // Top-Right & Bottom-Right Settings Button on Home Page
+        // Single Settings button on the home page.
         GameObject topSetBtn = new GameObject("HomeTopSettingsBtn");
         topSetBtn.transform.SetParent(homeScreenObj.transform, false);
         Button tsB = topSetBtn.AddComponent<Button>();
@@ -1467,19 +1635,6 @@ public class GameManager : MonoBehaviour
         tsRt.anchoredPosition = new Vector2(-92f, -125f);
         tsRt.sizeDelta = new Vector2(84f, 84f);
         tsB.onClick.AddListener(() => { TriggerHaptic(false); OpenSettingsModal(); });
-
-        GameObject botSetBtn = new GameObject("HomeBotSettingsBtn");
-        botSetBtn.transform.SetParent(homeScreenObj.transform, false);
-        Button bsB = botSetBtn.AddComponent<Button>();
-        Image bsI = botSetBtn.AddComponent<Image>();
-        bsI.sprite = gearIconSprite;
-        bsI.preserveAspect = true;
-        RectTransform bsRt = botSetBtn.GetComponent<RectTransform>();
-        bsRt.anchorMin = new Vector2(1f, 0f);
-        bsRt.anchorMax = new Vector2(1f, 0f);
-        bsRt.anchoredPosition = new Vector2(-92f, 125f);
-        bsRt.sizeDelta = new Vector2(84f, 84f);
-        bsB.onClick.AddListener(() => { TriggerHaptic(false); OpenSettingsModal(); });
 
         // 2. Below Coins Wallet: "Snake Puzzle" Main Heading!
         GameObject titleObj = new GameObject("GameTitle");
@@ -1503,7 +1658,7 @@ public class GameManager : MonoBehaviour
             new Color(0.36f, 0.72f, 0.99f),
             new Color(0.06f, 0.48f, 0.96f),
             calendarBadgeSprite,
-            "DAILY CHALLENGE",
+            "CHALLENGE",
             realDateStr,
             "Play"
         );
@@ -1719,6 +1874,177 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    void BuildEraserModal(Transform canvasTr)
+    {
+        Transform existing = canvasTr.Find("EraserModal");
+        if (existing != null) Destroy(existing.gameObject);
+
+        eraserModalObj = new GameObject("EraserModal");
+        eraserModalObj.transform.SetParent(canvasTr, false);
+        Image background = eraserModalObj.AddComponent<Image>();
+        background.color = new Color(0.04f, 0.08f, 0.16f, 0.65f);
+        RectTransform backgroundRect = eraserModalObj.GetComponent<RectTransform>();
+        backgroundRect.anchorMin = Vector2.zero;
+        backgroundRect.anchorMax = Vector2.one;
+        backgroundRect.sizeDelta = Vector2.zero;
+
+        GameObject card = CreateYellowSunburstModalCard(eraserModalObj.transform, "EraserCard", new Vector2(820f, 780f));
+        GameObject titleObject = new GameObject("Title");
+        titleObject.transform.SetParent(card.transform, false);
+        TextMeshProUGUI title = titleObject.AddComponent<TextMeshProUGUI>();
+        title.text = "Choose an Eraser";
+        StyleBoldTMP(title, 54f, new Color(0.08f, 0.15f, 0.27f));
+        RectTransform titleRect = titleObject.GetComponent<RectTransform>();
+        titleRect.anchoredPosition = new Vector2(0f, 260f);
+        titleRect.sizeDelta = new Vector2(720f, 85f);
+
+        GameObject descriptionObject = new GameObject("Description");
+        descriptionObject.transform.SetParent(card.transform, false);
+        TextMeshProUGUI description = descriptionObject.AddComponent<TextMeshProUGUI>();
+        description.text = "Select a snake to remove from this level.";
+        StyleBoldTMP(description, 30f, new Color(0.25f, 0.32f, 0.43f));
+        RectTransform descriptionRect = descriptionObject.GetComponent<RectTransform>();
+        descriptionRect.anchoredPosition = new Vector2(0f, 195f);
+        descriptionRect.sizeDelta = new Vector2(740f, 60f);
+
+        GameObject freeButton = CreateEraserIconButton(
+            card.transform, "FreeEraserBtn", new Vector2(0f, 85f), new Vector2(220f, 220f),
+            () =>
+        {
+            if (CanUseFreeEraser())
+                BeginEraserSelection(true, 0);
+        }, out _, out _, false, false, false);
+        eraserFreeButton = freeButton.GetComponent<Button>();
+        freeButton.transform.Find("EraserIcon").localScale = Vector3.one * 1.6f;
+
+        GameObject adButton = CreatePillButton(
+            card.transform, "AdEraserBtn", "Watch Video Ad",
+            new Color(0.18f, 0.68f, 0.30f), Color.white,
+            new Vector2(0f, -85f), new Vector2(660f, 125f), 40f, true);
+        adButton.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            PlaySimulatedVideoAd(() => BeginEraserSelection(false, 0));
+        });
+
+        GameObject coinButton = CreatePillButton(
+            card.transform, "CoinEraserBtn", "Erase for 100 Coins",
+            Color.white, new Color(0.12f, 0.46f, 0.96f),
+            new Vector2(0f, -225f), new Vector2(660f, 120f), 38f, false);
+        eraserCoinButtonText = coinButton.GetComponentInChildren<TextMeshProUGUI>();
+        coinButton.GetComponent<Button>().onClick.AddListener(() =>
+        {
+            if (playerCoins >= 100)
+                BeginEraserSelection(false, 100);
+            else if (eraserCoinButtonText != null)
+                eraserCoinButtonText.text = $"Need 100 Coins ({playerCoins})";
+        });
+
+        GameObject closeButton = CreateBorderlessTextButton(
+            card.transform, "CloseEraserBtn", "Close",
+            new Color(0.16f, 0.10f, 0.02f), new Vector2(0f, -330f), new Vector2(380f, 75f), 38f);
+        closeButton.GetComponent<Button>().onClick.AddListener(CloseEraserModal);
+
+        eraserModalObj.SetActive(false);
+        UpdateEraserAvailabilityUI();
+    }
+
+    void OpenEraserModal()
+    {
+        if (eraserModalObj == null) return;
+
+        isPaused = true;
+        UpdateEraserAvailabilityUI();
+        if (eraserCoinButtonText != null)
+            eraserCoinButtonText.text = "Erase for 100 Coins";
+        eraserModalObj.SetActive(true);
+        eraserModalObj.transform.SetAsLastSibling();
+    }
+
+    bool CanUseFreeEraser()
+    {
+        return eraserFreeUseLevel != GetCurrentEraserUseToken();
+    }
+
+    int GetCurrentEraserUseToken()
+    {
+        return isChallengeMode ? -Mathf.Max(1, challengeRunCount) : Mathf.Max(1, currentLevel);
+    }
+
+    void UpdateEraserAvailabilityUI()
+    {
+        string badge = CanUseFreeEraser() ? "1" : "+";
+        if (eraserBadgeText != null)
+            eraserBadgeText.text = badge;
+        if (eraserFreeButton != null)
+            eraserFreeButton.interactable = CanUseFreeEraser();
+    }
+
+    void BeginEraserSelection(bool useFreeEraser, int coinCost)
+    {
+        pendingFreeEraserUse = useFreeEraser;
+        pendingEraserCoinCost = coinCost;
+        isEraserSelectionActive = true;
+        isPaused = false;
+        if (eraserModalObj != null)
+            eraserModalObj.SetActive(false);
+        if (eraserButtonBackground != null)
+            eraserButtonBackground.color = new Color(1f, 0.78f, 0.72f);
+    }
+
+    void OnEraserButtonPressed()
+    {
+        TriggerHaptic(false);
+        if (isEraserSelectionActive)
+        {
+            CancelEraserSelection();
+            return;
+        }
+
+        OpenEraserModal();
+    }
+
+    void EraseSelectedSnake(SnakeController snake)
+    {
+        if (!isEraserSelectionActive || snake == null || snake.isMoving || snake.isCleared)
+            return;
+
+        if (pendingEraserCoinCost > playerCoins)
+        {
+            CancelEraserSelection();
+            OpenEraserModal();
+            if (eraserCoinButtonText != null)
+                eraserCoinButtonText.text = $"Need 100 Coins ({playerCoins})";
+            return;
+        }
+
+        if (pendingFreeEraserUse)
+            eraserFreeUseLevel = GetCurrentEraserUseToken();
+        if (pendingEraserCoinCost > 0)
+            playerCoins -= pendingEraserCoinCost;
+
+        CancelEraserSelection();
+        SaveProgress();
+        UpdateEraserAvailabilityUI();
+        UpdateCoinAndHintUI();
+        snake.EraseImmediately();
+    }
+
+    void CancelEraserSelection()
+    {
+        isEraserSelectionActive = false;
+        pendingFreeEraserUse = false;
+        pendingEraserCoinCost = 0;
+        if (eraserButtonBackground != null)
+            eraserButtonBackground.color = Color.white;
+    }
+
+    void CloseEraserModal()
+    {
+        if (eraserModalObj != null)
+            eraserModalObj.SetActive(false);
+        isPaused = false;
+    }
+
     void BuildMultiplayerComingSoonModal(Transform canvasTr)
     {
         Transform existing = canvasTr.Find("MultiplayerModal");
@@ -1734,38 +2060,27 @@ public class GameManager : MonoBehaviour
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        GameObject card = CreateYellowSunburstModalCard(multiplayerModalObj.transform, "MultiplayerCard", new Vector2(880f, 880f));
-
-        GameObject badge = new GameObject("ComingSoonBadge");
-        badge.transform.SetParent(card.transform, false);
-        Image bImg = badge.AddComponent<Image>();
-        bImg.sprite = pillSprite;
-        bImg.type = Image.Type.Sliced;
-        bImg.color = new Color(0.14f, 0.08f, 0.02f);
-        RectTransform bRt = badge.GetComponent<RectTransform>();
-        bRt.anchoredPosition = new Vector2(0f, 330f);
-        bRt.sizeDelta = new Vector2(380f, 68f);
-
-        GameObject bTxt = new GameObject("BadgeText");
-        bTxt.transform.SetParent(badge.transform, false);
-        TextMeshProUGUI bt = bTxt.AddComponent<TextMeshProUGUI>();
-        bt.text = "COMING SOON";
-        StyleBoldTMP(bt, 30f, new Color(1.0f, 0.88f, 0.25f));
-        bTxt.GetComponent<RectTransform>().sizeDelta = new Vector2(380f, 68f);
+        GameObject card = CreateYellowSunburstModalCard(multiplayerModalObj.transform, "MultiplayerCard", new Vector2(760f, 620f));
 
         GameObject tObj = new GameObject("Title");
         tObj.transform.SetParent(card.transform, false);
         TextMeshProUGUI tt = tObj.AddComponent<TextMeshProUGUI>();
-        tt.text = "Play With Friends";
-        StyleBoldTMP(tt, 58f, new Color(0.12f, 0.06f, 0.02f));
+        tt.text = "Play with Friends";
+        StyleBoldTMP(tt, 58f, new Color(0.08f, 0.15f, 0.27f));
         RectTransform tRt = tObj.GetComponent<RectTransform>();
-        tRt.anchoredPosition = new Vector2(0f, 225f);
-        tRt.sizeDelta = new Vector2(780f, 85f);
+        tRt.anchoredPosition = new Vector2(0f, 110f);
+        tRt.sizeDelta = new Vector2(680f, 85f);
 
-        CreatePillButton(card.transform, "InviteFriendsBtn", "Invite Friends (WhatsApp / Link)\n<size=25>Send Room Link or Friend Request • Coming Soon</size>", new Color(0.14f, 0.74f, 0.36f), Color.white, new Vector2(0f, 45f), new Vector2(740f, 145f), 34f, false);
-        CreatePillButton(card.transform, "FindOnlineBtn", "Find Online Opponent (Live 1v1)\n<size=25>Global Real-Time Matchmaking • Coming Soon</size>", new Color(0.14f, 0.50f, 0.98f), Color.white, new Vector2(0f, -130f), new Vector2(740f, 145f), 34f, false);
+        GameObject messageObject = new GameObject("ComingSoon");
+        messageObject.transform.SetParent(card.transform, false);
+        TextMeshProUGUI message = messageObject.AddComponent<TextMeshProUGUI>();
+        message.text = "Coming Soon";
+        StyleBoldTMP(message, 44f, new Color(0.20f, 0.42f, 0.68f));
+        RectTransform messageRect = messageObject.GetComponent<RectTransform>();
+        messageRect.anchoredPosition = new Vector2(0f, 0f);
+        messageRect.sizeDelta = new Vector2(680f, 75f);
 
-        GameObject closeBtn = CreateBorderlessTextButton(card.transform, "CloseMpBtn", "Back to Home", new Color(0.14f, 0.08f, 0.02f), new Vector2(0f, -310f), new Vector2(460f, 95f), 40f);
+        GameObject closeBtn = CreateBorderlessTextButton(card.transform, "CloseMpBtn", "Back to Home", new Color(0.12f, 0.20f, 0.32f), new Vector2(0f, -155f), new Vector2(460f, 80f), 40f);
         closeBtn.GetComponent<Button>().onClick.AddListener(() =>
         {
             multiplayerModalObj.SetActive(false);
@@ -1787,6 +2102,8 @@ public class GameManager : MonoBehaviour
     public void StartChallengeGameplay(bool advancePatternSeed)
     {
         ResetLevelTransitionEffects();
+        CancelEraserSelection();
+        if (eraserModalObj != null) eraserModalObj.SetActive(false);
 
         if (advancePatternSeed)
         {
@@ -1797,7 +2114,6 @@ public class GameManager : MonoBehaviour
         isChallengeMode = true;
         isPaused = false;
         isGridGuideActiveThisLevel = false;
-        halfLevelMilestoneShown = false;
         halfTimePopupShown = false;
         ResetCameraZoom();
 
@@ -1807,7 +2123,7 @@ public class GameManager : MonoBehaviour
         if (praiseFloatingObj != null) praiseFloatingObj.SetActive(false);
 
         DestroyLevelSnakes();
-        if (gridGuideLinesContainer != null) Destroy(gridGuideLinesContainer);
+        ResetBoardGrid();
 
         lives = 3;
         UpdateHeartsUI();
@@ -2065,11 +2381,12 @@ public class GameManager : MonoBehaviour
     public void LoadLevel(int level)
     {
         ResetLevelTransitionEffects();
+        CancelEraserSelection();
+        if (eraserModalObj != null) eraserModalObj.SetActive(false);
 
         isChallengeMode = false;
         isPaused = false;
         isGridGuideActiveThisLevel = false;
-        halfLevelMilestoneShown = false;
         halfTimePopupShown = false;
         ResetCameraZoom();
         currentLevel = Mathf.Max(1, level);
@@ -2079,7 +2396,7 @@ public class GameManager : MonoBehaviour
         if (winModalObj != null) winModalObj.SetActive(false);
         if (gameOverModalObj != null) gameOverModalObj.SetActive(false);
         if (praiseFloatingObj != null) praiseFloatingObj.SetActive(false);
-        if (gridGuideLinesContainer != null) Destroy(gridGuideLinesContainer);
+        ResetBoardGrid();
 
         DestroyLevelSnakes();
 
@@ -2203,14 +2520,43 @@ public class GameManager : MonoBehaviour
 
     void GenerateAddictiveLongSpineMazeCore(int level, int seed, bool isDailyChallenge150Plus)
     {
+        List<List<Vector2Int>> carvedSnakes = GenerateSnakePaths(
+            level,
+            seed,
+            isDailyChallenge150Plus,
+            challengeRunCount,
+            out currentCols,
+            out currentRows);
+
+        currentSpacing = 5.5f / Mathf.Max(currentCols, currentRows - 1);
+        float snakeWidth = currentSpacing * 0.28f;
+        currentOriginOffset = new Vector2((currentCols - 1) * currentSpacing * 0.5f, (currentRows - 1) * currentSpacing * 0.5f + 0.20f);
+
+        bool[,] occupied = new bool[currentCols, currentRows];
+        List<Vector2Int> allSnakeOccupiedCells = new List<Vector2Int>();
+
+        foreach (var path in carvedSnakes)
+            SpawnAndRegisterSnake(path, occupied, allSnakeOccupiedCells, snakeWidth);
+
+        BuildDotsUnderSnakesOnly(allSnakeOccupiedCells, currentSpacing, currentOriginOffset);
+    }
+
+    List<List<Vector2Int>> GenerateSnakePaths(
+        int level,
+        int seed,
+        bool isDailyChallenge150Plus,
+        int currentChallengeRunCount,
+        out int cols,
+        out int rows)
+    {
         int spineMinLen, spineMaxLen, targetSnakeCap;
         int shapeType = 0;
 
         if (isDailyChallenge150Plus)
         {
             // Daily Challenge: 25x33 Organic Island -> 150 to 200 Snakes with Long Spines!
-            currentCols = 25 + Mathf.Clamp(challengeRunCount % 3, 0, 2);
-            currentRows = 32 + Mathf.Clamp(challengeRunCount % 3, 0, 2);
+            cols = 25 + Mathf.Clamp(currentChallengeRunCount % 3, 0, 2);
+            rows = 32 + Mathf.Clamp(currentChallengeRunCount % 3, 0, 2);
             spineMinLen = 7;
             spineMaxLen = 15;
             targetSnakeCap = Random.Range(154, 198);
@@ -2219,8 +2565,8 @@ public class GameManager : MonoBehaviour
         else if (level <= 5)
         {
             // Levels 2 to 5: Easy, fast-paced addictive intro
-            currentCols = 4 + level;
-            currentRows = 5 + level;
+            cols = 4 + level;
+            rows = 5 + level;
             spineMinLen = 5;
             spineMaxLen = 10;
             targetSnakeCap = 30;
@@ -2228,8 +2574,8 @@ public class GameManager : MonoBehaviour
         }
         else if (level == 6)
         {
-            currentCols = 16;
-            currentRows = 18;
+            cols = 16;
+            rows = 18;
             spineMinLen = 7;
             spineMaxLen = 16;
             targetSnakeCap = 62;
@@ -2238,8 +2584,8 @@ public class GameManager : MonoBehaviour
         else
         {
             // Levels 7+: 55 to 95+ Snakes with Long Winding Spines!
-            currentCols = Mathf.Clamp(15 + (level - 6) / 2, 16, 20);
-            currentRows = Mathf.Clamp(19 + (level - 6) / 2, 20, 25);
+            cols = Mathf.Clamp(15 + (level - 6) / 2, 16, 20);
+            rows = Mathf.Clamp(19 + (level - 6) / 2, 20, 25);
             spineMinLen = 8;
             spineMaxLen = 18;
             targetSnakeCap = Mathf.Clamp(56 + (level - 6) * 3, 56, 98);
@@ -2247,19 +2593,15 @@ public class GameManager : MonoBehaviour
             shapeType = patterns[(level - 7) % patterns.Length];
         }
 
-        currentSpacing = 5.5f / Mathf.Max(currentCols, currentRows - 1);
-        float snakeWidth = currentSpacing * 0.28f;
-        currentOriginOffset = new Vector2((currentCols - 1) * currentSpacing * 0.5f, (currentRows - 1) * currentSpacing * 0.5f + 0.20f);
-
-        bool[,] unassigned = new bool[currentCols, currentRows];
-        for (int x = 0; x < currentCols; x++)
-            for (int y = 0; y < currentRows; y++)
-                unassigned[x, y] = IsCellInsideShape(x, y, currentCols, currentRows, shapeType, seed);
+        bool[,] unassigned = new bool[cols, rows];
+        for (int x = 0; x < cols; x++)
+            for (int y = 0; y < rows; y++)
+                unassigned[x, y] = IsCellInsideShape(x, y, cols, rows, shapeType, seed);
 
         int[] dx = { 0, 1, 0, -1 };
         int[] dy = { 1, 0, -1, 0 };
 
-        List<List<Vector2Int>> carvedSnakes = new List<List<Vector2Int>>();
+        var carvedSnakes = new List<List<Vector2Int>>();
         HashSet<Vector2Int> allVacatedCells = new HashSet<Vector2Int>();
         HashSet<Vector2Int> lastSnakeCells = new HashSet<Vector2Int>();
 
@@ -2275,11 +2617,11 @@ public class GameManager : MonoBehaviour
             int minL = buildLongSpine ? spineMinLen : 4;
             int maxL = buildLongSpine ? spineMaxLen : 7;
 
-            List<Vector2Int> snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, currentCols, currentRows, dx, dy, minL, maxL, requireBlocker, buildLongSpine);
+            List<Vector2Int> snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, cols, rows, dx, dy, minL, maxL, requireBlocker, buildLongSpine);
             if (snake == null)
-                snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, currentCols, currentRows, dx, dy, 3, 6, false, false);
+                snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, cols, rows, dx, dy, 3, 6, false, false);
             if (snake == null)
-                snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, currentCols, currentRows, dx, dy, 2, 4, false, false);
+                snake = CarveNextInterlockingSnake(unassigned, allVacatedCells, lastSnakeCells, cols, rows, dx, dy, 2, 4, false, false);
 
             if (snake != null)
             {
@@ -2295,13 +2637,7 @@ public class GameManager : MonoBehaviour
             else break;
         }
 
-        bool[,] occupied = new bool[currentCols, currentRows];
-        List<Vector2Int> allSnakeOccupiedCells = new List<Vector2Int>();
-
-        foreach (var path in carvedSnakes)
-            SpawnAndRegisterSnake(path, occupied, allSnakeOccupiedCells, snakeWidth);
-
-        BuildDotsUnderSnakesOnly(allSnakeOccupiedCells, currentSpacing, currentOriginOffset);
+        return carvedSnakes;
     }
 
     List<Vector2Int> CarveNextInterlockingSnake(bool[,] unassigned, HashSet<Vector2Int> allVacated, HashSet<Vector2Int> lastVacated, int cols, int rows, int[] dx, int[] dy, int minLen, int maxLen, bool strictLock, bool preferLongCorridors)
@@ -2564,12 +2900,20 @@ public class GameManager : MonoBehaviour
     public void UseGridGuide()
     {
         if (isPaused) return;
-        if (isGridGuideActiveThisLevel) return;
+        if (isGridGuideActiveThisLevel)
+        {
+            isBoardGridVisible = !isBoardGridVisible;
+            if (gridGuideLinesContainer != null)
+                gridGuideLinesContainer.SetActive(isBoardGridVisible);
+            return;
+        }
 
         if (remainingGridGuides <= 0)
         {
             if (gridGuideAdModalObj != null)
             {
+                if (gridGuideCoinButtonText != null)
+                    gridGuideCoinButtonText.text = "Get Grid Guide (100 Coins)";
                 isPaused = true;
                 gridGuideAdModalObj.transform.SetAsLastSibling();
                 gridGuideAdModalObj.SetActive(true);
@@ -2588,6 +2932,7 @@ public class GameManager : MonoBehaviour
     {
         if (gridGuideLinesContainer != null) Destroy(gridGuideLinesContainer);
         gridGuideLinesContainer = new GameObject("GridGuideLinesContainer");
+        isBoardGridVisible = true;
 
         Material lineMat = new Material(Shader.Find("Sprites/Default"));
         Color gridLineCol = new Color(0.82f, 0.86f, 0.93f, 0.65f);
@@ -2668,18 +3013,6 @@ public class GameManager : MonoBehaviour
         activeSnakes.Remove(s);
         UpdateSnakeCounter();
 
-        // Point 10: 50% Level Completed Milestone Popup!
-        if (!halfLevelMilestoneShown && initialSnakeCountInLevel >= 6 && activeSnakes.Count == (initialSnakeCountInLevel / 2))
-        {
-            halfLevelMilestoneShown = true;
-            isPaused = true;
-            if (halfLevelMilestoneModalObj != null)
-            {
-                halfLevelMilestoneModalObj.SetActive(true);
-                halfLevelMilestoneModalObj.transform.SetAsLastSibling();
-            }
-        }
-
         if (activeSnakes.Count == 0)
         {
             isTimerActive = false;
@@ -2757,6 +3090,8 @@ public class GameManager : MonoBehaviour
 
             winModalObj.transform.SetAsLastSibling();
             winModalObj.SetActive(true);
+            if (audioFeedback != null)
+                audioFeedback.PlayLevelComplete();
             StartCoroutine(SpawnConfettiBurstRoutine(2.5f, generation));
         }
         else
@@ -2882,6 +3217,13 @@ public class GameManager : MonoBehaviour
     {
         if (snakeCountText != null)
             snakeCountText.text = activeSnakes.Count.ToString();
+
+        if (levelProgressFill != null)
+        {
+            int totalSnakes = Mathf.Max(1, initialSnakeCountInLevel);
+            targetLevelProgress = Mathf.Clamp01(
+                (totalSnakes - activeSnakes.Count) / (float)totalSnakes);
+        }
     }
 
     void UpdateHeartsUI()
@@ -2938,9 +3280,9 @@ public class GameManager : MonoBehaviour
 
         Vector2 center = new Vector2(w * 0.5f, h * 0.54f);
         float cornerRadius = 46f;
-        Color goldenYellow = new Color(1.0f, 0.74f, 0.08f, 1f);
-        Color warmYellow = new Color(1.0f, 0.86f, 0.28f, 1f);
-        Color lightRayYellow = new Color(1.0f, 0.96f, 0.65f, 1f);
+        Color deepBlue = new Color(0.78f, 0.87f, 0.98f, 1f);
+        Color paleBlue = new Color(0.96f, 0.98f, 1f, 1f);
+        Color whiteRay = new Color(1f, 1f, 1f, 1f);
 
         for (int y = 0; y < h; y++)
         {
@@ -2965,8 +3307,8 @@ public class GameManager : MonoBehaviour
                 float dist = diff.magnitude / (w * 0.72f);
                 float beam = Mathf.SmoothStep(0.25f, 0.75f, Mathf.Sin(Mathf.Atan2(diff.y, diff.x) * 16f) * 0.5f + 0.5f);
 
-                Color baseCol = Color.Lerp(warmYellow, goldenYellow, Mathf.Clamp01(dist));
-                Color finalCol = Color.Lerp(baseCol, lightRayYellow, beam * 0.42f * Mathf.Clamp01(1f - dist * 0.45f));
+                Color baseCol = Color.Lerp(paleBlue, deepBlue, Mathf.Clamp01(dist));
+                Color finalCol = Color.Lerp(baseCol, whiteRay, beam * 0.24f * Mathf.Clamp01(1f - dist * 0.45f));
                 finalCol.a = alpha;
                 t.SetPixel(x, y, finalCol);
             }
@@ -2975,7 +3317,7 @@ public class GameManager : MonoBehaviour
         return Sprite.Create(t, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f));
     }
 
-    // Point 6: Floating Grid Guide Button Sprite (White 3D Circle + Tilted Purple Ruler + Blue Badge!)
+    // Point 6: Floating Grid Guide Button Sprite (White 3D Circle + Tilted Purple Ruler)
     Sprite CreateGridGuideRulerButtonSprite(int s)
     {
         Texture2D t = new Texture2D(s, s, TextureFormat.RGBA32, false);
@@ -2983,8 +3325,6 @@ public class GameManager : MonoBehaviour
         Vector2 mainCenter = new Vector2(-0.04f, -0.04f);
         float mainRadius = 0.76f;
         Vector2 shadowCenter = new Vector2(-0.04f, -0.10f);
-        Vector2 badgeCenter = new Vector2(0.50f, 0.50f);
-        float badgeRadius = 0.28f;
 
         for (int y = 0; y < s; y++)
         {
@@ -3023,18 +3363,128 @@ public class GameManager : MonoBehaviour
                     finalCol = isTick ? new Color(0.22f, 0.16f, 0.62f, 1f) : rulerCol;
                 }
 
-                float dBadge = Vector2.Distance(p, badgeCenter);
-                if (dBadge <= badgeRadius)
-                {
-                    float bEdge = Mathf.Clamp01((badgeRadius - dBadge) / 0.025f);
-                    finalCol = Color.Lerp(finalCol, new Color(0.14f, 0.48f, 0.96f, 1f), bEdge);
-                }
-
                 t.SetPixel(x, y, finalCol);
             }
         }
         t.Apply();
         return Sprite.Create(t, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f));
+    }
+
+    Sprite CreateEraserIconSprite(int s)
+    {
+        Texture2D texture = new Texture2D(s, s, TextureFormat.RGBA32, false);
+        texture.filterMode = FilterMode.Bilinear;
+        texture.wrapMode = TextureWrapMode.Clamp;
+
+        for (int y = 0; y < s; y++)
+        {
+            for (int x = 0; x < s; x++)
+            {
+                float nx = (x / (float)(s - 1)) * 2f - 1f;
+                float ny = (y / (float)(s - 1)) * 2f - 1f;
+                float along = (nx + ny) * 0.7071f;
+                float across = (-nx + ny) * 0.7071f;
+                float clampedAlong = Mathf.Clamp(along, -0.34f, 0.34f);
+                float distance = Mathf.Sqrt(
+                    (along - clampedAlong) * (along - clampedAlong) + across * across);
+
+                Color color = Color.clear;
+                if (distance < 0.19f)
+                    color = new Color(0.10f, 0.19f, 0.34f, 1f);
+                if (distance < 0.15f)
+                    color = along < 0f
+                        ? new Color(0.98f, 0.43f, 0.50f, 1f)
+                        : new Color(0.24f, 0.63f, 0.94f, 1f);
+                if (distance < 0.15f && Mathf.Abs(along) < 0.035f)
+                    color = new Color(0.96f, 0.98f, 1f, 1f);
+
+                texture.SetPixel(x, y, color);
+            }
+        }
+
+        texture.Apply();
+        return Sprite.Create(texture, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f));
+    }
+
+    GameObject CreateEraserIconButton(
+        Transform parent,
+        string objectName,
+        Vector2 position,
+        Vector2 size,
+        System.Action onClick,
+        out Image background,
+        out TextMeshProUGUI badgeText,
+        bool anchorToBottom = true,
+        bool showCircleBackground = true,
+        bool showBadge = true)
+    {
+        GameObject buttonObject = new GameObject(objectName);
+        buttonObject.transform.SetParent(parent, false);
+        Button button = buttonObject.AddComponent<Button>();
+        background = buttonObject.AddComponent<Image>();
+        background.sprite = showCircleBackground ? circleSprite : null;
+        background.color = showCircleBackground ? Color.white : Color.clear;
+        if (showCircleBackground)
+        {
+            Shadow shadow = buttonObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.28f, 0.37f, 0.52f, 0.24f);
+            shadow.effectDistance = new Vector2(0f, -5f);
+        }
+
+        RectTransform buttonRect = buttonObject.GetComponent<RectTransform>();
+        buttonRect.anchorMin = anchorToBottom ? new Vector2(0.5f, 0f) : new Vector2(0.5f, 0.5f);
+        buttonRect.anchorMax = buttonRect.anchorMin;
+        buttonRect.pivot = new Vector2(0.5f, 0.5f);
+        buttonRect.anchoredPosition = position;
+        buttonRect.sizeDelta = size;
+
+        GameObject iconObject = new GameObject("EraserIcon");
+        iconObject.transform.SetParent(buttonObject.transform, false);
+        Image icon = iconObject.AddComponent<Image>();
+        icon.sprite = eraserIconSprite;
+        icon.preserveAspect = true;
+        icon.raycastTarget = false;
+        RectTransform iconRect = iconObject.GetComponent<RectTransform>();
+        iconRect.anchorMin = Vector2.zero;
+        iconRect.anchorMax = Vector2.one;
+        float iconInset = showCircleBackground ? 0.30f : 0f;
+        iconRect.sizeDelta = new Vector2(-size.x * iconInset, -size.y * iconInset);
+        iconRect.anchoredPosition = Vector2.zero;
+
+        badgeText = null;
+        if (showBadge)
+            badgeText = CreateHudCountBadge(buttonObject.transform, "EraserCountBadge", size);
+
+        button.onClick.AddListener(() => onClick?.Invoke());
+        return buttonObject;
+    }
+
+    TextMeshProUGUI CreateHudCountBadge(Transform parent, string objectName, Vector2 buttonSize)
+    {
+        GameObject badgeObject = new GameObject(objectName);
+        badgeObject.transform.SetParent(parent, false);
+        Image badgeBackground = badgeObject.AddComponent<Image>();
+        badgeBackground.sprite = circleSprite;
+        badgeBackground.color = new Color(0.14f, 0.48f, 0.96f);
+        badgeBackground.raycastTarget = false;
+        RectTransform badgeRect = badgeObject.GetComponent<RectTransform>();
+        badgeRect.anchorMin = new Vector2(0.5f, 0.5f);
+        badgeRect.anchorMax = new Vector2(0.5f, 0.5f);
+        badgeRect.pivot = new Vector2(0.5f, 0.5f);
+        badgeRect.anchoredPosition = new Vector2(buttonSize.x * 0.29f, buttonSize.y * 0.29f);
+        badgeRect.sizeDelta = new Vector2(buttonSize.x * 0.34f, buttonSize.y * 0.34f);
+
+        GameObject textObject = new GameObject("CountText");
+        textObject.transform.SetParent(badgeObject.transform, false);
+        TextMeshProUGUI badgeText = textObject.AddComponent<TextMeshProUGUI>();
+        StyleBoldTMP(badgeText, buttonSize.x * 0.16f, Color.white);
+        badgeText.raycastTarget = false;
+        RectTransform textRect = textObject.GetComponent<RectTransform>();
+        textRect.anchorMin = Vector2.zero;
+        textRect.anchorMax = Vector2.one;
+        textRect.sizeDelta = Vector2.zero;
+        textRect.anchoredPosition = Vector2.zero;
+        return badgeText;
     }
 
     Sprite CreateBigPurpleRulerSprite(int s)
@@ -3425,7 +3875,7 @@ public class GameManager : MonoBehaviour
         return Sprite.Create(t, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f));
     }
 
-    Sprite CreateArrowPuzzleHintButtonSprite(int s)
+    Sprite CreateArrowPuzzleHintButtonSprite(int s, bool includeButtonChrome = true, bool includeBadge = true)
     {
         Texture2D t = new Texture2D(s, s, TextureFormat.RGBA32, false);
         t.filterMode = FilterMode.Bilinear;
@@ -3445,14 +3895,14 @@ public class GameManager : MonoBehaviour
                 Color finalCol = Color.clear;
 
                 float dShadow = Vector2.Distance(p, shadowCenter);
-                if (dShadow <= mainRadius + 0.08f)
+                if (includeButtonChrome && dShadow <= mainRadius + 0.08f)
                 {
                     float shA = Mathf.Clamp01(1f - Mathf.Max(0f, dShadow - (mainRadius - 0.04f)) / 0.12f) * 0.25f;
                     finalCol = new Color(0.40f, 0.48f, 0.62f, shA);
                 }
 
                 float dMain = Vector2.Distance(p, mainCenter);
-                if (dMain <= mainRadius)
+                if (includeButtonChrome && dMain <= mainRadius)
                 {
                     float edgeA = Mathf.Clamp01((mainRadius - dMain) / 0.025f);
                     bool isRim = dMain >= (mainRadius - 0.055f);
@@ -3481,7 +3931,7 @@ public class GameManager : MonoBehaviour
                     finalCol = new Color(0.32f, 0.38f, 0.50f, 1f);
 
                 float dBadge = Vector2.Distance(p, badgeCenter);
-                if (dBadge <= badgeRadius)
+                if (includeBadge && dBadge <= badgeRadius)
                 {
                     float bEdge = Mathf.Clamp01((badgeRadius - dBadge) / 0.025f);
                     finalCol = Color.Lerp(finalCol, new Color(0.14f, 0.44f, 0.88f, 1f), bEdge);

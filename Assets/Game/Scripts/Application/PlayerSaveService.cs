@@ -22,14 +22,16 @@ namespace SnakeEscape.Application
         public int gridGuides;
         public int coins;
         public int challengeRunCount;
+        public int eraserFreeUseLevel;
         public bool challengeUnlocked;
         public bool hapticsEnabled;
+        public bool soundEffectsEnabled;
         public int checksum;
     }
 
     public sealed class PlayerSaveService
     {
-        private const int CurrentSchemaVersion = 1;
+        private const int CurrentSchemaVersion = 3;
         private const string VersionedSaveKey = "SnakePuzzle_Save_v1";
         private const string FreshStartKey = "SnakePuzzle_FreshStart_V8";
         private const string LevelKey = "SnakePuzzle_Level";
@@ -39,6 +41,8 @@ namespace SnakeEscape.Application
         private const string ChallengeRunsKey = "SnakePuzzle_ChallengeRuns";
         private const string ChallengeUnlockedKey = "SnakePuzzle_ChallengeUnlocked";
         private const string HapticsKey = "SnakePuzzle_Haptics";
+        private const string SoundEffectsKey = "SnakePuzzle_SoundEffects";
+        private const string FreeEraserLevelKey = "SnakePuzzle_FreeEraserLevel";
 
         private readonly IPlayerSaveStore store;
 
@@ -60,7 +64,14 @@ namespace SnakeEscape.Application
             if (!string.IsNullOrEmpty(json))
             {
                 if (TryReadVersioned(json, out PlayerSaveData versioned))
+                {
+                    if (versioned.schemaVersion != CurrentSchemaVersion)
+                    {
+                        versioned.schemaVersion = CurrentSchemaVersion;
+                        Save(versioned);
+                    }
                     return versioned;
+                }
 
                 Debug.LogWarning("[PlayerSaveService] Versioned save data was invalid; falling back to legacy PlayerPrefs.");
             }
@@ -87,6 +98,8 @@ namespace SnakeEscape.Application
             store.SetInt(ChallengeRunsKey, data.challengeRunCount);
             store.SetInt(ChallengeUnlockedKey, data.challengeUnlocked ? 1 : 0);
             store.SetInt(HapticsKey, data.hapticsEnabled ? 1 : 0);
+            store.SetInt(SoundEffectsKey, data.soundEffectsEnabled ? 1 : 0);
+            store.SetInt(FreeEraserLevelKey, data.eraserFreeUseLevel);
             store.SetInt(FreshStartKey, 1);
             store.Save();
         }
@@ -102,7 +115,8 @@ namespace SnakeEscape.Application
                 coins = 760,
                 challengeRunCount = 0,
                 challengeUnlocked = false,
-                hapticsEnabled = true
+                hapticsEnabled = true,
+                soundEffectsEnabled = true
             };
         }
 
@@ -114,7 +128,9 @@ namespace SnakeEscape.Application
                 || store.HasKey(CoinsKey)
                 || store.HasKey(ChallengeRunsKey)
                 || store.HasKey(ChallengeUnlockedKey)
-                || store.HasKey(HapticsKey);
+                || store.HasKey(FreeEraserLevelKey)
+                || store.HasKey(HapticsKey)
+                || store.HasKey(SoundEffectsKey);
         }
 
         private PlayerSaveData ReadLegacySaveData()
@@ -126,8 +142,10 @@ namespace SnakeEscape.Application
                 gridGuides = store.GetInt(GridsKey, 1),
                 coins = store.GetInt(CoinsKey, 760),
                 challengeRunCount = store.GetInt(ChallengeRunsKey, 0),
+                eraserFreeUseLevel = store.GetInt(FreeEraserLevelKey, 0),
                 challengeUnlocked = store.GetInt(ChallengeUnlockedKey, 0) == 1,
-                hapticsEnabled = store.GetInt(HapticsKey, 1) == 1
+                hapticsEnabled = store.GetInt(HapticsKey, 1) == 1,
+                soundEffectsEnabled = store.GetInt(SoundEffectsKey, 1) == 1
             };
             Normalize(data);
             return data;
@@ -146,17 +164,24 @@ namespace SnakeEscape.Application
             }
 
             if (data == null
-                || data.schemaVersion != CurrentSchemaVersion
+                || (data.schemaVersion < 1 || data.schemaVersion > CurrentSchemaVersion)
                 || data.currentLevel < 1
                 || data.hints < 0
                 || data.gridGuides < 0
                 || data.coins < 0
                 || data.challengeRunCount < 0
-                || data.checksum != CalculateChecksum(data))
+                || data.checksum != (data.schemaVersion == 1
+                    ? CalculateVersion1Checksum(data)
+                    : data.schemaVersion == 2 ? CalculateVersion2Checksum(data) : CalculateChecksum(data)))
             {
                 data = null;
                 return false;
             }
+
+            if (data.schemaVersion == 1)
+                data.soundEffectsEnabled = true;
+            if (data.schemaVersion < 3)
+                data.eraserFreeUseLevel = 0;
 
             return true;
         }
@@ -171,6 +196,43 @@ namespace SnakeEscape.Application
         }
 
         private static int CalculateChecksum(PlayerSaveData data)
+        {
+            unchecked
+            {
+                int checksum = 17;
+                checksum = checksum * 31 + data.schemaVersion;
+                checksum = checksum * 31 + data.currentLevel;
+                checksum = checksum * 31 + data.hints;
+                checksum = checksum * 31 + data.gridGuides;
+                checksum = checksum * 31 + data.coins;
+                checksum = checksum * 31 + data.challengeRunCount;
+                checksum = checksum * 31 + (data.challengeUnlocked ? 1 : 0);
+                checksum = checksum * 31 + (data.hapticsEnabled ? 1 : 0);
+                checksum = checksum * 31 + (data.soundEffectsEnabled ? 1 : 0);
+                checksum = checksum * 31 + data.eraserFreeUseLevel;
+                return checksum;
+            }
+        }
+
+        private static int CalculateVersion2Checksum(PlayerSaveData data)
+        {
+            unchecked
+            {
+                int checksum = 17;
+                checksum = checksum * 31 + data.schemaVersion;
+                checksum = checksum * 31 + data.currentLevel;
+                checksum = checksum * 31 + data.hints;
+                checksum = checksum * 31 + data.gridGuides;
+                checksum = checksum * 31 + data.coins;
+                checksum = checksum * 31 + data.challengeRunCount;
+                checksum = checksum * 31 + (data.challengeUnlocked ? 1 : 0);
+                checksum = checksum * 31 + (data.hapticsEnabled ? 1 : 0);
+                checksum = checksum * 31 + (data.soundEffectsEnabled ? 1 : 0);
+                return checksum;
+            }
+        }
+
+        private static int CalculateVersion1Checksum(PlayerSaveData data)
         {
             unchecked
             {

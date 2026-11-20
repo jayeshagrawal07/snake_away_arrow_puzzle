@@ -1,7 +1,7 @@
 # 📊 Snake Escape — Project Progress & Task Tracker
 
 > Specification reference: [`SNAKE_ESCAPE_PRODUCTION_PLAN.md`](./SNAKE_ESCAPE_PRODUCTION_PLAN.md)  
-> Last updated: **October 26, 2026**
+> Last updated: **October 31, 2026**
 
 ---
 
@@ -125,6 +125,42 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Fix completion-screen background edges in the original UI by using square-edged full-screen artwork while preserving rounded popup-card artwork.
 - [x] User confirmed the completion-screen edges look correct in Unity Game view.
 - [ ] Verify the completion screen on a device or a different aspect ratio.
+- [x] Confirm the game should continue supporting both portrait and landscape orientations.
+- [x] Update the existing legacy CanvasScaler to match screen height in landscape and retain the existing portrait scaling behavior.
+- [x] Apply dynamic safe-area insets to edge-anchored UI under full-screen panels and refresh layout when the screen size, orientation, safe area, or canvas scale changes.
+- [x] Compile the legacy gameplay assembly after the responsive UI change (0 warnings/errors).
+- [x] Rerun the full Unity EditMode suite after the responsive UI change; 76/76 passed (0 failed, 0 skipped). This is logic/compilation coverage, not visual layout validation.
+- [x] User reports visually verifying the original scene in portrait and landscape. Specific devices/aspect ratios and observed results were not recorded.
+- [x] Add centralized procedural sound effects to the existing legacy game for UI buttons, blocked moves, successful escapes, and level completion.
+- [x] Replace blocked-move and successful-escape tones with distinct breathy, raspier hiss effects synthesized from filtered broadband noise; retain the UI and level-complete tones.
+- [ ] Audition the updated hiss effects in Unity and on a device; consider a properly licensed recording if greater realism is needed.
+- [x] Add a persisted Sound Effects ON/OFF setting with migration from version-1 saves; existing saves default to sound enabled without losing progress.
+- [x] Compile the legacy gameplay assembly after audio integration (0 warnings/errors).
+- [x] Verify save settings migration and round-trip in focused EditMode tests (9/9 passed); run the complete EditMode suite (77/77 passed).
+- [x] User confirmed the original synthesized sound effects and sound setting work in the original scene. The new hiss effects are not yet auditioned; background music remains unimplemented.
+- [x] Reduce legacy snake movement speed and refine the body taper at the tail.
+- [x] Replace the level's 50% completion popup with a live completion progress bar.
+- [x] Keep the existing ruler icon as the grid control; it toggles visibility after use and offers a grid guide for 100 coins or a simulated ad when no free guides remain.
+- [x] Add a target-selecting eraser: one free use per campaign level or challenge run, then 100 coins or the existing simulated rewarded-ad flow. The free-use marker is persisted without changing the saved level or wallet.
+- [x] Refresh modal cards to a blue/white palette, remove the duplicate home Settings button, rename the home card to Challenge, and simplify Play with Friends to a Coming Soon message.
+- [x] Reuse the existing persisted coin wallet and level/challenge rewards; eraser use is the new coin sink.
+- [x] Upgrade the save snapshot to schema v3 with migration coverage for v1/v2 and round-trip coverage for eraser use.
+- [x] Compile `Assembly-CSharp` and `SnakeEscape.Tests.EditMode` after these changes (0 warnings/errors).
+- [x] Run the full Unity EditMode suite after the latest HUD and popup changes: 78/78 passed, 0 failed, 0 skipped (Unity Test Runner, EditMode, October 31, 2026).
+- [x] Fix the live completion progress bar by assigning its fill sprite and slowing the fill animation; the full EditMode suite remained 78/78.
+- [x] User confirmed the updated Hint popup, HUD count-chip alignment, and current gameplay/UI changes work in the original scene in Play mode. This is manual user-reported validation, not device QA.
+- [x] Configure Android publisher/display name (`Snake Puzzle`) and normalized package ID (`com.lynos.snake.arrow.puzzle.away.jam`) with user confirmation.
+- [x] Build an Android Development APK with the progress-bar fix and verify its package ID, display label, SDK range, and v2 signature. This is not a release-signed build.
+- [x] Show the existing Snake Puzzle welcome/main menu when the app launches; load the saved level behind it so Continue Game resumes the player's progress.
+- [x] Build a fresh Android Development APK including the startup-menu change; verify app metadata and v2 signature (November 1, 2026).
+- [ ] Install and test the APK on an Android device when one is available; none was connected during this run.
+- [ ] Resolve or device-validate Unity's Android warning that Active Input Handling is set to Both; the original scene currently uses the new Input System UI module and legacy `Input` calls.
+- [x] Remove the duplicate text grid button and show the eraser as a circular icon button beside the hint and existing ruler.
+- [x] Match the eraser HUD button to the hint/ruler circular style and add a blue count badge (`1` before the free use, `+` after).
+- [x] Fix the eraser popup layout: its shared icon-button helper used bottom anchoring even inside the centered popup card, which made the free option overlap Cancel. The popup free option now uses centered anchoring and has separated label/action spacing.
+- [x] In both guide/eraser popups, display the tool artwork as a large standalone icon rather than a round HUD button. The eraser artwork is enlarged to a similar visible scale as the ruler preview and has no count badge or “Free Eraser Used” text; the HUD eraser keeps its availability badge.
+- [x] Match the eraser popup card height, dim overlay, button order, button dimensions/colors/font sizes, and Close placement to the Grid Guide popup; enlarge the eraser artwork to a similar visible scale as the ruler icon.
+- [x] Make the Hint popup consistent with Grid Guide: use standalone hint artwork without the HUD plate/count chip and match title/action button styling. Use shared badge geometry and centered text for the Hint, ruler, and eraser HUD chips.
 - [x] Confirm the existing scene contains the legacy game manager and EventSystem.
 - [x] Configure the existing scene as the enabled build scene.
 - [x] Clarify in project documentation that the newer gameplay scene is separate and not the migration target.
@@ -154,6 +190,13 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 - [x] Isolate deterministic legacy level generation from Unity's global random stream so generating a level does not shift random behavior elsewhere.
 - [x] Add the legacy random-state regression test; both gameplay and EditMode test assemblies compile with 0 warnings/errors.
 - [x] Run the full Unity EditMode suite with the legacy generator regression test; 73/73 passed (0 failed, 0 skipped).
+- [x] Extract legacy snake-path carving from scene spawning so levels can be audited without loading a scene or touching saved progress.
+- [x] Audit seeded levels 2, 5, 6, 7, and 13 for repeatability, bounds, continuity, overlap, domain validation, and carve-order solvability; all checks passed.
+- [x] Build the legacy gameplay and EditMode test assemblies; the sequential EditMode test build passed with 0 warnings/errors (the first parallel attempt encountered a shared intermediate-file lock).
+- [x] Run the complete Unity batch-mode EditMode suite after the generator audit; 74/74 passed (0 failed, 0 skipped).
+- [x] Add save/progression regressions for Level 14 snapshot round-trip and corrupted versioned-save checksum fallback; focused Unity EditMode tests passed 8/8.
+- [x] Run the full Unity batch-mode EditMode suite after save/progression QA; 76/76 passed (0 failed, 0 skipped).
+- [ ] Playtest levels 5–7 in the original scene to judge the large board/count change at Level 6 and the lower occupied-cell ratio at Level 7; do not alter generator policy without a demonstrated gameplay issue.
 - [ ] Built-player validation of the separate modular authored-level pipeline is deferred; revisit only if that pipeline is selected for a concrete product need.
 - [x] Compile original `Assembly-CSharp` and modular EditMode test assemblies after the route/result changes (0 warnings/errors; built sequentially).
 - [x] User asked to assume original-scene clear, blocked, and concurrent escape behavior remains working; no PlayMode check was run after the latest integration.
@@ -177,7 +220,7 @@ The checklist below describes components found in the newer `Assets/Game/` imple
 *Add any features or side-tasks here so we never lose track of them while staying focused on current milestone.*
 
 ### Audio & Haptics (M7)
-- [ ] Sound effects: tap, blocked bump, slither escape, level win celebration, button click.
+- [x] Add procedural UI-button and level-complete tones plus breathy broadband-noise hiss effects for blocked moves and successful escapes. The original effects were user-confirmed; the updated hiss still needs auditioning.
 - [ ] Ambient background music (calm, minimal loop).
 - [ ] Platform haptics implementation (Android `Vibrator` / iOS `UIFeedbackGenerator`).
 
